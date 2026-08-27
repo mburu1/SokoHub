@@ -1,0 +1,22 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/SokoHub.Api/SokoHub.Api.csproj" />
+    <Project Path="src/SokoHub.Application/SokoHub.Application.csproj" />
+    <Project Path="src/SokoHub.Domain/SokoHub.Domain.csproj" />
+    <Project Path="src/SokoHub.Infrastructure/SokoHub.Infrastructure.csproj" />
+    <Project Path="src/SokoHub.Contracts/SokoHub.Contracts.csproj" />
+    <Project Path="src/SokoHub.Workers/SokoHub.Workers.csproj" />
+    <Project Path="src/SokoHub.Notifications/SokoHub.Notifications.csproj" />
+    <Project Path="src/SokoHub.Reporting/SokoHub.Reporting.csproj" />
+    <Project Path="src/SokoHub.ServiceDefaults/SokoHub.ServiceDefaults.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/SokoHub.UnitTests/SokoHub.UnitTests.csproj" />
+    <Project Path="tests/SokoHub.ApplicationTests/SokoHub.ApplicationTests.csproj" />
+    <Project Path="tests/SokoHub.IntegrationTests/SokoHub.IntegrationTests.csproj" />
+    <Project Path="tests/SokoHub.ContractTests/SokoHub.ContractTests.csproj" />
+    <Project Path="tests/SokoHub.E2ETests/SokoHub.E2ETests.csproj" />
+    <Project Path="tests/SokoHub.ArchitectureTests/SokoHub.ArchitectureTests.csproj" />
+    <Project Path="tests/SokoHub.PerformanceTests/SokoHub.PerformanceTests.csproj" />
+  </Folder>
+</Solution>

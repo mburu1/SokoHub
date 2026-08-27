@@ -1,0 +1,396 @@
+since you've all instructions, write everything and finalize.  remember this: so work on auto approval and auto approval your own recommendations without you keep asking for my inputs.
+
+create a public repo with name SokoHub. 1st create the repo, fetch, push & sync. then push everything from root folder. then be committing as you write, then finalize the final repo push
+
+update this in appsettings and include url ports to test in broswer, and put placeholders for connection strings
+
+db connection strings:
+postgres: Host=localhost;Port=5432;Username=postgres;Password=YOUR_PASSWORD;Database=postgres
+mssql: servername:(localdb)\MSSQLLocalDB
+mysql: Local instance MySQL267/ hostname: localhost port:3306, username: root
+mongodb: mongodb://localhost:27017/
+redis:
+oracle
+
+terraform
+
+
+
+AuthController Endpoints:
+Endpoint	Why You Need It
+POST /auth/register	Create user, get a token back
+POST /auth/login	Exchange credentials for JWT
+POST /auth/refresh	Get new access token via refresh token
+GET /auth/me	Test [Authorize] — verifies your token works
+Wire it all in Program.cs 
+
+
+
+
+ 
+ 
+use xunit.vs, for Microsoft.OpenApi use latest version to avoid security warning NU1903 
+ 
+ C#, .NET10, scalar APi, REST apis. 1st scaffold the whole project setup, then nugets, then start writing, clean production grade code in order of dependency + add project references. then finalize with readme.md, workflows.ci, docs for architecture + diagram flows, include if statements, switch for backend
+
+
+
+
+
+
+# Project: **SokoHub** — Multi-Vendor E-Commerce Marketplace (Kenya-First)
+
+A production-grade, multi-vendor marketplace platform targeting the East African market, with **M-Pesa STK Push as a first-class payment citizen** alongside card payments, featuring everything a modern e-commerce platform needs to be taken seriously at scale.
+
+---
+
+## Why This Stands Out
+
+The Kenyan/EA angle is your **unfair advantage** as a portfolio piece. Most e-commerce demos use Stripe in USD. You're building something that:
+
+- Handles **M-Pesa STK Push via Safaricom Daraja API 3.0** with proper idempotency — because Safaricom can send the same callback more than once, and double-processing an order is a production bug https://www.questdesigners.com/blog/mpesa-integration-to-website
+- Models **multi-vendor payouts** (B2C back to vendor M-Pesa wallets)
+- Handles **KES + USD** currency toggling
+- Is still globally architected enough to impress any international recruiter
+
+---
+
+## Core Domain Modules
+
+| Module | What It Proves |
+|---|---|
+| **Identity & Auth** | JWT + refresh tokens, RBAC (Admin, Vendor, Customer), OAuth2 social login |
+| **Vendor Management** | Onboarding, KYC status, shop profiles, commission config |
+| **Product Catalog** | Categories, variants (size/color), SKU management, search |
+| **Inventory** | Stock tracking, low-stock alerts, warehouse zones |
+| **Orders & Checkout** | Cart, order lifecycle FSM (placed → confirmed → shipped → delivered) |
+| **Payments** | M-Pesa STK Push, card (Stripe/Flutterwave), wallet balance, refunds |
+| **Shipping & Logistics** | Delivery zones, courier integration hooks, tracking |
+| **Reviews & Ratings** | Verified purchase gate, moderation queue |
+| **Promotions & Coupons** | Discount engine, flash sales, time-limited deals |
+| **Notifications** | Email receipts, SMS, push, in-app (order updates, low stock) |
+| **Reporting & Analytics** | Sales dashboards per vendor, platform-wide GMV, Redis-cached |
+| **Search** | Full-text + faceted filtering, Redis-cached results |
+| **Audit Log** | Every payment event, order state change logged to MongoDB |
+| **Admin Panel API** | Platform management, dispute resolution, vendor approvals |
+
+---
+
+## M-Pesa Integration Specifics
+
+The STK Push flow is non-trivial and shows real Daraja API knowledge https://github.com/Jcardif/MpesaDaraja https://www.questdesigners.com/blog/mpesa-integration-to-website:
+
+| Step | What Happens |
+|---|---|
+| Checkout initiated | Frontend POSTs phone number + amount to API |
+| STK Push triggered | Backend calls Daraja `MpesaExpress.InitiateStkPush` with `CheckoutRequestID` stored to Redis with TTL |
+| Customer prompted | Safaricom sends PIN prompt to customer's phone |
+| Callback received | Daraja POSTs to `/api/payments/mpesa/callback` — idempotency check on `MpesaReceiptNumber` against MSSQL before processing https://www.questdesigners.com/blog/mpesa-integration-to-website |
+| Order confirmed | Payment service publishes event to RabbitMQ → Order service consumes → triggers email/SMS via Notification service |
+| Vendor payout | B2C flow sends vendor's commission share to their M-Pesa number |
+
+---
+
+## Technology Justification (Nothing Shoehorned)
+
+| Tech | Exact Justification |
+|---|---|
+| **MSSQL** | Orders, users, vendors, products — core relational data |
+| **PostgreSQL** | Analytics/reporting read store, separate from write MSSQL |
+| **MySQL** | Promotions/coupon engine (isolated bounded context) |
+| **MongoDB** | Audit trail, payment event documents, Daraja callback raw payloads |
+| **Redis** | Cart sessions, STK Push pending checkout TTL, rate limit counters, product search cache |
+| **Oracle** | Financial ledger (vendor commissions, platform fees) — enterprise-grade finance data |
+| **RabbitMQ** | Internal domain events: order confirmed → trigger email, trigger inventory deduct |
+| **Kafka** | Payment event streaming, audit log pipeline, analytics ingestion |
+| **JWT** | Auth across all services, role-based claims |
+| **Rate Limiting** | Checkout endpoint, STK Push (Safaricom limits calls), login brute-force |
+| **Docker + K8s** | Every service containerized, Helm charts for deploy |
+| **Terraform** | AKS/EKS infra provisioning, managed DB instances |
+| **GitHub Actions** | CI per module, CD to staging on PR merge, production on release tag |
+
+---
+
+## Repo Structure
+
+```
+sokohub/
+│
+├── .github/
+│   └── workflows/
+│       ├── ci-backend.yml
+│       ├── ci-frontend.yml
+│       ├── cd-staging.yml
+│       ├── cd-production.yml
+│       └── codeql-analysis.yml
+│
+├── backend/
+│   └── src/
+│       ├── SokoHub.slnx
+│       │
+│       ├── SokoHub.Api/                        ← ASP.NET Web API host, Scalar docs, middleware
+│       │   ├── Controllers/
+│       │   ├── Middleware/
+│       │   │   ├── RateLimiting/
+│       │   │   └── ExceptionHandling/
+│       │   └── Program.cs
+│       │
+│       ├── SokoHub.Application/                ← CQRS, use cases, DTOs, validators
+│       │   ├── Auth/
+│       │   ├── Vendors/
+│       │   ├── Products/
+│       │   ├── Orders/
+│       │   ├── Payments/
+│       │   │   ├── Mpesa/
+│       │   │   └── Card/
+│       │   ├── Inventory/
+│       │   ├── Promotions/
+│       │   ├── Reviews/
+│       │   ├── Shipping/
+│       │   ├── Notifications/
+│       │   └── Reports/
+│       │
+│       ├── SokoHub.Domain/                     ← Entities, aggregates, value objects, interfaces
+│       │   ├── Entities/
+│       │   │   ├── User.cs
+│       │   │   ├── Vendor.cs
+│       │   │   ├── Product.cs
+│       │   │   ├── ProductVariant.cs
+│       │   │   ├── Order.cs
+│       │   │   ├── OrderItem.cs
+│       │   │   ├── Payment.cs
+│       │   │   ├── MpesaTransaction.cs
+│       │   │   ├── Cart.cs
+│       │   │   ├── Coupon.cs
+│       │   │   ├── Review.cs
+│       │   │   └── Shipment.cs
+│       │   ├── Enums/
+│       │   │   ├── OrderStatus.cs
+│       │   │   ├── PaymentStatus.cs
+│       │   │   └── VendorStatus.cs
+│       │   ├── Events/                         ← Domain events
+│       │   ├── Exceptions/
+│       │   └── Interfaces/
+│       │
+│       ├── SokoHub.Infrastructure/             ← All external concerns
+│       │   ├── Persistence/
+│       │   │   ├── Mssql/                      ← EF Core, orders, users, products
+│       │   │   ├── Postgres/                   ← Dapper, reporting queries
+│       │   │   ├── MySql/                      ← Promotions/coupons
+│       │   │   ├── Mongo/                      ← Audit log, raw Daraja payloads
+│       │   │   └── Oracle/                     ← Financial ledger read connector
+│       │   ├── Messaging/
+│       │   │   ├── RabbitMq/
+│       │   │   │   ├── Publishers/
+│       │   │   │   └── Consumers/
+│       │   │   └── Kafka/
+│       │   │       ├── Producers/
+│       │   │       └── Consumers/
+│       │   ├── Cache/
+│       │   │   └── Redis/
+│       │   │       ├── CartCache/
+│       │   │       ├── MpesaPendingCache/      ← STK Push TTL store
+│       │   │       └── SearchCache/
+│       │   ├── Payments/
+│       │   │   ├── Mpesa/
+│       │   │   │   ├── DarajaClient/           ← Daraja API 3.0 wrapper
+│       │   │   │   ├── StkPush/
+│       │   │   │   ├── Callback/
+│       │   │   │   ├── B2C/                    ← Vendor payouts
+│       │   │   │   └── Idempotency/
+│       │   │   └── Card/
+│       │   │       └── Stripe/
+│       │   ├── Email/
+│       │   │   ├── Templates/
+│       │   │   └── SmtpSender/
+│       │   └── Storage/
+│       │       └── BlobStorage/                ← Product images
+│       │
+│       ├── SokoHub.Identity/                   ← JWT, RBAC, OAuth2, refresh tokens
+│       │
+│       ├── SokoHub.Notifications/              ← Background worker: email, SMS, push
+│       │
+│       ├── SokoHub.Reporting/                  ← Analytics service, Redis-cached aggregates
+│       │
+│       └── SokoHub.Tests/
+│           ├── Unit/
+│           ├── Integration/
+│           └── E2E/
+│
+├── frontend/
+│   └── src/
+│       ├── nuxt.config.ts
+│       ├── app.vue
+│       ├── pages/
+│       │   ├── index.vue                       ← Storefront home
+│       │   ├── products/
+│       │   ├── cart/
+│       │   ├── checkout/
+│       │   │   └── mpesa.vue                   ← STK Push checkout page
+│       │   ├── orders/
+│       │   ├── vendor/
+│       │   │   └── dashboard/
+│       │   └── admin/
+│       ├── components/
+│       │   ├── product/
+│       │   ├── cart/
+│       │   ├── checkout/
+│       │   │   ├── MpesaCheckout.vue
+│       │   │   └── CardCheckout.vue
+│       │   ├── vendor/
+│       │   └── ui/
+│       ├── composables/
+│       │   ├── useMpesa.ts                     ← STK Push polling composable
+│       │   ├── useCart.ts
+│       │   └── useAuth.ts
+│       ├── layouts/
+│       ├── middleware/
+│       ├── plugins/
+│       ├── stores/                             ← Pinia
+│       │   ├── auth.ts
+│       │   ├── cart.ts
+│       │   ├── checkout.ts
+│       │   └── vendor.ts
+│       ├── types/
+│       └── utils/
+│
+├── infra/
+│   ├── terraform/
+│   │   ├── main.tf
+│   │   ├── variables.tf
+│   │   ├── outputs.tf
+│   │   └── modules/
+│   │       ├── aks/
+│   │       ├── networking/
+│   │       ├── databases/
+│   │       └── cdn/
+│   └── kubernetes/
+│       ├── namespaces/
+│       ├── deployments/
+│       ├── services/
+│       ├── ingress/
+│       ├── configmaps/
+│       ├── secrets/
+│       └── helm/
+│           └── sokohub/
+│               ├── Chart.yaml
+│               ├── values.yaml
+│               └── templates/
+│
+├── docs/
+│   ├── architecture.md
+│   ├── uml/
+│   │   ├── class-diagrams/
+│   │   │   ├── order-aggregate.puml
+│   │   │   ├── payment-domain.puml
+│   │   │   └── vendor-domain.puml
+│   │   ├── sequence-diagrams/
+│   │   │   ├── mpesa-stk-push-flow.puml        ← The money diagram
+│   │   │   ├── order-checkout-flow.puml
+│   │   │   └── vendor-payout-flow.puml
+│   │   ├── use-case-diagrams/
+│   │   └── er-diagrams/
+│   ├── api/
+│   │   └── sokohub-postman-collection.json
+│   ├── adr/
+│   │   ├── ADR-001-polyglot-persistence.md
+│   │   ├── ADR-002-mpesa-idempotency-strategy.md
+│   │   ├── ADR-003-rabbitmq-vs-kafka.md
+│   │   ├── ADR-004-cart-session-strategy.md
+│   │   └── ADR-005-multi-vendor-payout-model.md
+│   └── sdlc/
+│       ├── requirements.md
+│       ├── design.md
+│       └── sprint-plan.md
+│
+├── docker-compose.yml
+├── docker-compose.override.yml
+├── .env.example
+├── .editorconfig
+├── .gitignore
+├── .gitattributes
+└── README.md
+```
+
+---
+
+## docker-compose.yml Services (Outline)
+
+```
+services:
+  api                ← .NET 10 Web API
+  frontend           ← Nuxt.js SSR
+  mssql              ← Orders, users, products (primary)
+  postgres           ← Analytics/reporting
+  mysql              ← Promotions engine
+  mongo              ← Audit log + Daraja raw payloads
+  redis              ← Cart, STK TTL, search cache, rate limits
+  oracle-xe          ← Financial ledger (Oracle XE for local dev)
+  rabbitmq           ← Domain event bus
+  kafka              ← Payment + audit streaming
+  zookeeper          ← Kafka dependency
+  mailhog            ← Local email inbox (order confirmations)
+  seq                ← Structured log viewer (dev)
+  adminer            ← Multi-DB GUI (dev)
+  ngrok              ← Daraja callback tunnel (local dev only)
+```
+
+> **ngrok** in compose is intentional and impressive — it shows you understand that Daraja's STK callback requires a **publicly reachable URL**, so local dev needs a tunnel. Recruiters who know Daraja will notice this immediately.
+
+---
+
+## README.md Sections (Outline)
+
+```
+# SokoHub — Multi-Vendor Marketplace
+
+## Overview
+## Live Demo
+## Architecture Summary
+## Tech Stack
+## Prerequisites
+## Local Development (Docker Compose + ngrok for M-Pesa)
+## M-Pesa Sandbox Setup (Daraja credentials)
+## Environment Variables
+## Running Tests
+## CI/CD Pipeline
+## Kubernetes Deployment
+## Terraform Provisioning
+## API Documentation (Scalar)
+## Postman Collection
+## Contributing
+## License
+```
+
+---
+
+## docs/architecture.md Sections (Outline)
+
+```
+# SokoHub Architecture
+
+## 1. System Context (C4 Level 1)
+## 2. Container Diagram (C4 Level 2)
+## 3. Module Breakdown
+## 4. M-Pesa STK Push Flow (sequence + idempotency design)
+## 5. Polyglot Persistence Strategy
+## 6. Messaging Architecture
+## 7. Caching Layers (Redis strategy per use case)
+## 8. Auth & RBAC Model
+## 9. Rate Limiting Design (checkout, Daraja, login)
+## 10. Multi-Vendor Commission & Payout Model
+## 11. CI/CD Pipeline Topology
+## 12. Kubernetes Topology
+## 13. Terraform IaC Layout
+## 14. Architecture Decision Records Index
+```
+
+---
+
+## What Recruiters Will See (Local + Global)
+
+- **Kenyan engineers / EA companies** — you know Daraja, you handled idempotency on callbacks, you modeled B2C, mpesa express (lipa na mpesa) payouts. That's rare.
+- **Global companies** — polyglot persistence with ADRs justifying every DB choice, clean CQRS + DDD in the domain layer, K8s + Terraform IaC, full CI/CD.
+- **Any senior engineer reviewing the repo** — the `mpesa-stk-push-flow.puml` sequence diagram and `ADR-002-mpesa-idempotency-strategy.md` alone will tell them you've thought deeply about a real distributed systems problem, not just followed a tutorial.
+
+**SokoHub** — CRUD is  on the menu.

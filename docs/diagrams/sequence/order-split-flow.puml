@@ -1,0 +1,10 @@
+@startuml
+title Multi-vendor Order Split
+participant Checkout
+participant OrderSplitSaga
+participant Orders
+participant Inventory
+Checkout -> OrderSplitSaga: cart confirmed
+OrderSplitSaga -> Inventory: reserve per vendor
+OrderSplitSaga -> Orders: create sub-orders
+@enduml

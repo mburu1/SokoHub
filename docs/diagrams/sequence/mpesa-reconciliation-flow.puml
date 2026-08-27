@@ -1,0 +1,11 @@
+@startuml
+title M-Pesa STK Reconciliation
+participant Worker
+participant StkQuery
+participant Daraja
+participant Ledger
+Worker -> StkQuery: pending > 90s
+StkQuery -> Daraja: stkpushquery
+Daraja --> StkQuery: terminal status
+StkQuery -> Ledger: settle / mismatch flag
+@enduml
