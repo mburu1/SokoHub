@@ -43,7 +43,14 @@ public sealed class Vendor : AggregateRoot
             taxId,
             commissionRate);
 
+    public void UpdateProfile(string businessName)
+    {
+        BusinessName = Ensure.MaxLength(Ensure.NotBlank(businessName), 200);
+        Touch();
+    }
+
     public void VerifyKyc(Guid documentId, string verifiedBy)
+
     {
         Ensure.That(Status == VendorStatus.Pending || Status == VendorStatus.UnderReview, "vendor_not_verifiable", "Vendor is not in a verifiable state.");
 
