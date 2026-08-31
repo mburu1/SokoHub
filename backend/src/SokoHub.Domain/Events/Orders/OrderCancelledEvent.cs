@@ -1,5 +1,8 @@
 namespace SokoHub.Domain.Events.Orders;
 
-public class OrderCancelledEvent
+public sealed record OrderCancelledEvent : DomainEvent
 {
+    public required string OrderNumber { get; init; }
+
+    public required string Reason { get; init; }
 }

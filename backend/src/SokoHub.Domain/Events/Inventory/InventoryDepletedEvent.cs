@@ -1,5 +1,8 @@
 namespace SokoHub.Domain.Events.Inventory;
 
-public class InventoryDepletedEvent
+public sealed record InventoryDepletedEvent : DomainEvent
 {
+    public required Guid VariantId { get; init; }
+
+    public required Guid WarehouseId { get; init; }
 }

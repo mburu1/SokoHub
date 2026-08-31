@@ -1,5 +1,8 @@
 namespace SokoHub.Domain.Events.Vendors;
 
-public class VendorRegisteredEvent
+public sealed record VendorRegisteredEvent : DomainEvent
 {
+    public required string DisplayName { get; init; }
+
+    public required string Email { get; init; }
 }

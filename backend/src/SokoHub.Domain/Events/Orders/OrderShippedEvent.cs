@@ -1,5 +1,8 @@
 namespace SokoHub.Domain.Events.Orders;
 
-public class OrderShippedEvent
+public sealed record OrderShippedEvent : DomainEvent
 {
+    public required Guid VendorOrderId { get; init; }
+
+    public required string TrackingNumber { get; init; }
 }

@@ -1,5 +1,6 @@
 namespace SokoHub.Domain.Events.Vendors;
 
-public class VendorSuspendedEvent
+public sealed record VendorSuspendedEvent : DomainEvent
 {
+    public required string Reason { get; init; }
 }

@@ -868,6 +868,16 @@
       "code": "NU1510",
       "level": "Warning",
       "warningLevel": 1,
+      "message": "PackageReference Microsoft.Extensions.Options.ConfigurationExtensions will not be pruned. This package is automatically available and does not need to be referenced explicitly. Remove the PackageReference item.",
+      "libraryId": "Microsoft.Extensions.Options.ConfigurationExtensions",
+      "targetGraphs": [
+        "net10.0"
+      ]
+    },
+    {
+      "code": "NU1510",
+      "level": "Warning",
+      "warningLevel": 1,
       "message": "PackageReference Microsoft.Extensions.DependencyInjection.Abstractions will not be pruned. This package is automatically available and does not need to be referenced explicitly. Remove the PackageReference item.",
       "libraryId": "Microsoft.Extensions.DependencyInjection.Abstractions",
       "targetGraphs": [
@@ -910,16 +920,6 @@
       "warningLevel": 1,
       "message": "PackageReference Microsoft.Extensions.Configuration.Abstractions will not be pruned. This package is automatically available and does not need to be referenced explicitly. Remove the PackageReference item.",
       "libraryId": "Microsoft.Extensions.Configuration.Abstractions",
-      "targetGraphs": [
-        "net10.0"
-      ]
-    },
-    {
-      "code": "NU1510",
-      "level": "Warning",
-      "warningLevel": 1,
-      "message": "PackageReference Microsoft.Extensions.Options.ConfigurationExtensions will not be pruned. This package is automatically available and does not need to be referenced explicitly. Remove the PackageReference item.",
-      "libraryId": "Microsoft.Extensions.Options.ConfigurationExtensions",
       "targetGraphs": [
         "net10.0"
       ]

@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("SokoHub.E2ETests")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+0d55ae0469fd9bb5c4db2f5ff21e40849b88e5dc")]
 [assembly: System.Reflection.AssemblyProductAttribute("SokoHub.E2ETests")]
 [assembly: System.Reflection.AssemblyTitleAttribute("SokoHub.E2ETests")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

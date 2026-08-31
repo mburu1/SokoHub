@@ -15,6 +15,18 @@
     {
       "code": "NU1510",
       "level": "Warning",
+      "message": "PackageReference Microsoft.Extensions.Options.ConfigurationExtensions will not be pruned. This package is automatically available and does not need to be referenced explicitly. Remove the PackageReference item.",
+      "projectPath": "D:\\Mwangi Wa Mburu\\Coding\\SokoHub\\backend\\src\\SokoHub.Api\\SokoHub.Api.csproj",
+      "warningLevel": 1,
+      "filePath": "D:\\Mwangi Wa Mburu\\Coding\\SokoHub\\backend\\src\\SokoHub.Api\\SokoHub.Api.csproj",
+      "libraryId": "Microsoft.Extensions.Options.ConfigurationExtensions",
+      "targetGraphs": [
+        "net10.0"
+      ]
+    },
+    {
+      "code": "NU1510",
+      "level": "Warning",
       "message": "PackageReference Microsoft.Extensions.DependencyInjection.Abstractions will not be pruned. This package is automatically available and does not need to be referenced explicitly. Remove the PackageReference item.",
       "projectPath": "D:\\Mwangi Wa Mburu\\Coding\\SokoHub\\backend\\src\\SokoHub.Api\\SokoHub.Api.csproj",
       "warningLevel": 1,
@@ -68,18 +80,6 @@
       "warningLevel": 1,
       "filePath": "D:\\Mwangi Wa Mburu\\Coding\\SokoHub\\backend\\src\\SokoHub.Api\\SokoHub.Api.csproj",
       "libraryId": "Microsoft.Extensions.Configuration.Abstractions",
-      "targetGraphs": [
-        "net10.0"
-      ]
-    },
-    {
-      "code": "NU1510",
-      "level": "Warning",
-      "message": "PackageReference Microsoft.Extensions.Options.ConfigurationExtensions will not be pruned. This package is automatically available and does not need to be referenced explicitly. Remove the PackageReference item.",
-      "projectPath": "D:\\Mwangi Wa Mburu\\Coding\\SokoHub\\backend\\src\\SokoHub.Api\\SokoHub.Api.csproj",
-      "warningLevel": 1,
-      "filePath": "D:\\Mwangi Wa Mburu\\Coding\\SokoHub\\backend\\src\\SokoHub.Api\\SokoHub.Api.csproj",
-      "libraryId": "Microsoft.Extensions.Options.ConfigurationExtensions",
       "targetGraphs": [
         "net10.0"
       ]

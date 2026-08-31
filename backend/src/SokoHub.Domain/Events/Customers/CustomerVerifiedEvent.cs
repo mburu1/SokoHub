@@ -1,5 +1,6 @@
 namespace SokoHub.Domain.Events.Customers;
 
-public class CustomerVerifiedEvent
+public sealed record CustomerVerifiedEvent : DomainEvent
 {
+    public required string Email { get; init; }
 }

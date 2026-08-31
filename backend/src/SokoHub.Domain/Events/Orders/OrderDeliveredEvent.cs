@@ -1,5 +1,6 @@
 namespace SokoHub.Domain.Events.Orders;
 
-public class OrderDeliveredEvent
+public sealed record OrderDeliveredEvent : DomainEvent
 {
+    public required Guid VendorOrderId { get; init; }
 }

@@ -1,5 +1,8 @@
 namespace SokoHub.Domain.Events.Customers;
 
-public class CustomerRegisteredEvent
+public sealed record CustomerRegisteredEvent : DomainEvent
 {
+    public required string Email { get; init; }
+
+    public required string Phone { get; init; }
 }
