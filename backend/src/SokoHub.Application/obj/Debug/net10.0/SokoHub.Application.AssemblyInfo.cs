@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("SokoHub.Application")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+5c180b7b106d2da2423501212d14188347303918")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+fc957768a4d65253681dafe45c5f336000fb31ae")]
 [assembly: System.Reflection.AssemblyProductAttribute("SokoHub.Application")]
 [assembly: System.Reflection.AssemblyTitleAttribute("SokoHub.Application")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

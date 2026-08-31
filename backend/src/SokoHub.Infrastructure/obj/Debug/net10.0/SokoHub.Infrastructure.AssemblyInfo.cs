@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("SokoHub.Infrastructure")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+0d55ae0469fd9bb5c4db2f5ff21e40849b88e5dc")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+fc957768a4d65253681dafe45c5f336000fb31ae")]
 [assembly: System.Reflection.AssemblyProductAttribute("SokoHub.Infrastructure")]
 [assembly: System.Reflection.AssemblyTitleAttribute("SokoHub.Infrastructure")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

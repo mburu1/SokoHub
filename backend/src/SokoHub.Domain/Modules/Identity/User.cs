@@ -111,7 +111,7 @@ public sealed class User : AggregateRoot
 
     public RefreshToken IssueRefreshToken(string tokenHash, DateTimeOffset expiresAt)
     {
-        Ensure.That(Status == UserStatus.Active, "user_not_active", "Inactive users cannot receive refresh tokens.");
+        Ensure.That(Status == UserStatus.Active || Status == UserStatus.PendingVerification, "user_not_active", "Inactive users cannot receive refresh tokens.");
         var token = RefreshToken.Issue(Id, tokenHash, expiresAt);
         _refreshTokens.Add(token);
         Touch();

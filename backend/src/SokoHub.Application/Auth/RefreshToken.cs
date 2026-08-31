@@ -1,5 +1,6 @@
 using MediatR;
 using SokoHub.Contracts.Auth;
+using SokoHub.Domain.Common.Specifications;
 using SokoHub.Domain.Modules.Identity;
 
 namespace SokoHub.Application.Auth;
@@ -20,15 +21,33 @@ public sealed class RefreshTokenHandler : IRequestHandler<RefreshTokenCommand, R
 
     public async Task<RefreshTokenResponse> Handle(RefreshTokenCommand request, CancellationToken cancellationToken)
     {
-        // var token = await _unitOfWork.Repository<RefreshToken>().GetByHashAsync(request.RefreshToken);
-        // if (token == null || !token.IsActive) throw new UnauthorizedAccessException("Invalid token");
+        var spec = new RefreshTokenByHashSpecification(request.RefreshToken);
+        var token = await _unitOfWork.Repository<RefreshToken>().SingleAsync(spec, cancellationToken);
 
-        // var user = await _unitOfWork.Repository<User>().GetByIdAsync(token.UserId);
-        // var newToken = _jwtProvider.GenerateToken(user);
-        // var newRefresh = user.IssueRefreshToken(_jwtProvider.GenerateRefreshToken(), DateTimeOffset.UtcNow.AddDays(7));
+        if (token == null || !token.IsActive)
+        {
+            throw new UnauthorizedAccessException("Invalid or expired refresh token.");
+        }
 
-        // return new RefreshTokenResponse(newToken.AccessToken, newRefresh.TokenHash);
+        var user = await _unitOfWork.Repository<User>().GetByIdAsync(token.UserId, cancellationToken);
+        if (user == null) throw new UnauthorizedAccessException("User not found.");
 
-        throw new NotImplementedException("Refresh token implementation requires repository connectivity.");
+        var newToken = _jwtProvider.GenerateToken(user);
+        var newRefresh = user.IssueRefreshToken(_jwtProvider.GenerateRefreshToken(), DateTimeOffset.UtcNow.AddDays(7));
+
+        // TODO: Update old token to revoked and save new one
+        // token.Revoke("refreshed");
+        // await _unitOfWork.Repository<RefreshToken>().AddAsync(newRefresh, cancellationToken);
+        // await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return new RefreshTokenResponse(newToken.AccessToken, newRefresh.TokenHash);
+    }
+}
+
+public class RefreshTokenByHashSpecification : Specification<RefreshToken>
+{
+    public RefreshTokenByHashSpecification(string hash)
+        : base(t => t.TokenHash == hash)
+    {
     }
 }

@@ -2,6 +2,8 @@ using MediatR;
 using SokoHub.Contracts.Auth;
 using SokoHub.Domain.Common.ValueObjects;
 using SokoHub.Domain.Modules.Identity;
+using SokoHub.Application.Common.Interfaces;
+using SokoHub.Domain.Interfaces;
 
 namespace SokoHub.Application.Auth;
 
@@ -14,8 +16,8 @@ public record RegisterUserCommand(
 public sealed class RegisterUserHandler : IRequestHandler<RegisterUserCommand, AuthResponse>
 {
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IPasswordHasher _passwordHasher; // Interface to be defined
-    private readonly IJwtProvider _jwtProvider;       // Interface to be defined
+    private readonly IPasswordHasher _passwordHasher;
+    private readonly IJwtProvider _jwtProvider;
 
     public RegisterUserHandler(IUnitOfWork unitOfWork, IPasswordHasher passwordHasher, IJwtProvider jwtProvider)
     {
@@ -32,13 +34,14 @@ public sealed class RegisterUserHandler : IRequestHandler<RegisterUserCommand, A
 
         var user = User.Register(email, phone, request.DisplayName, passwordHash);
 
-        // TODO: Add to repository and save
-        // var userRepo = _unitOfWork.Repository<User>();
-        // await userRepo.AddAsync(user);
-        // await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _unitOfWork.Repository<User>().AddAsync(user, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         var token = _jwtProvider.GenerateToken(user);
         var refresh = user.IssueRefreshToken(_jwtProvider.GenerateRefreshToken(), DateTimeOffset.UtcNow.AddDays(7));
+
+        await _unitOfWork.Repository<RefreshToken>().AddAsync(refresh, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return new AuthResponse(
             token.AccessToken,
@@ -47,16 +50,4 @@ public sealed class RegisterUserHandler : IRequestHandler<RegisterUserCommand, A
             user.Id,
             user.Email.Value);
     }
-}
-
-public interface IPasswordHasher
-{
-    string HashPassword(string password);
-    bool VerifyPassword(string password, string hash);
-}
-
-public interface IJwtProvider
-{
-    (string AccessToken, DateTime Expiration) GenerateToken(User user);
-    string GenerateRefreshToken();
 }
