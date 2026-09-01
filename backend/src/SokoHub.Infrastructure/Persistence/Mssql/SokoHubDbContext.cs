@@ -91,5 +91,27 @@ public class SokoHubDbContext : DbContext
             builder.Property(p => p.Slug).IsRequired();
             builder.Property(p => p.Description).HasMaxLength(8000);
         });
+
+        modelBuilder.Entity<ProductVariant>(builder => {
+            builder.HasKey(v => v.Id);
+            builder.Property(v => v.Sku).IsRequired();
+        });
+
+        modelBuilder.Entity<ProductImage>(builder => {
+            builder.HasKey(i => i.Id);
+            builder.Property(i => i.Url).IsRequired();
+        });
+
+        modelBuilder.Entity<Category>(builder => {
+            builder.HasKey(c => c.Id);
+            builder.Property(c => c.Name).IsRequired().HasMaxLength(100);
+            builder.Property(c => c.Slug).IsRequired();
+        });
+
+        modelBuilder.Entity<Brand>(builder => {
+            builder.HasKey(b => b.Id);
+            builder.Property(b => b.Name).IsRequired().HasMaxLength(100);
+            builder.Property(b => b.Slug).IsRequired();
+        });
     }
 }
