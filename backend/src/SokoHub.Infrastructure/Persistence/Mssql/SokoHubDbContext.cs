@@ -146,6 +146,31 @@ public class SokoHubDbContext : DbContext
             builder.HasKey(p => p.Id);
         });
 
+        modelBuilder.Entity<Payment>(builder => {
+            builder.HasKey(p => p.Id);
+            builder.Property(p => p.Reference).IsRequired();
+        });
+
+        modelBuilder.Entity<PaymentAttempt>(builder => {
+            builder.HasKey(a => a.Id);
+        });
+
+        modelBuilder.Entity<PaymentCallback>(builder => {
+            builder.HasKey(c => c.Id);
+        });
+
+        modelBuilder.Entity<PaymentRefund>(builder => {
+            builder.HasKey(r => r.Id);
+        });
+
+        modelBuilder.Entity<PaymentTransaction>(builder => {
+            builder.HasKey(t => t.Id);
+        });
+
+        modelBuilder.Entity<PaymentIntent>(builder => {
+            builder.HasKey(i => i.Id);
+        });
+
         modelBuilder.Entity<OrderStatusHistory>(builder => {
             builder.HasKey(h => h.Id);
         });

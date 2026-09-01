@@ -1,7 +1,10 @@
 namespace SokoHub.Contracts.Payments;
 
 public record PaymentResponse(
-    Guid PaymentId,
-    string Reference,
+    Guid Id,
+    Guid OrderId,
+    decimal Amount,
+    string Currency,
+    string Method,
     string Status,
-    decimal Amount);
+    string Reference);
