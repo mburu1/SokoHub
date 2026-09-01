@@ -129,6 +129,27 @@ public class SokoHubDbContext : DbContext
             builder.Property(z => z.Code).IsRequired().HasMaxLength(20);
         });
 
+        modelBuilder.Entity<Order>(builder => {
+            builder.HasKey(o => o.Id);
+            builder.Property(o => o.Number).IsRequired();
+        });
+
+        modelBuilder.Entity<OrderItem>(builder => {
+            builder.HasKey(i => i.Id);
+        });
+
+        modelBuilder.Entity<VendorOrder>(builder => {
+            builder.HasKey(vo => vo.Id);
+        });
+
+        modelBuilder.Entity<OrderPayment>(builder => {
+            builder.HasKey(p => p.Id);
+        });
+
+        modelBuilder.Entity<OrderStatusHistory>(builder => {
+            builder.HasKey(h => h.Id);
+        });
+
         modelBuilder.Entity<Category>(builder => {
             builder.HasKey(c => c.Id);
             builder.Property(c => c.Name).IsRequired().HasMaxLength(100);
