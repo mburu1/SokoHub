@@ -102,6 +102,33 @@ public class SokoHubDbContext : DbContext
             builder.Property(i => i.Url).IsRequired();
         });
 
+        modelBuilder.Entity<InventoryItem>(builder => {
+            builder.HasKey(i => i.Id);
+            builder.Property(i => i.Sku).IsRequired();
+        });
+
+        modelBuilder.Entity<InventoryReservation>(builder => {
+            builder.HasKey(r => r.Id);
+        });
+
+        modelBuilder.Entity<InventoryAdjustment>(builder => {
+            builder.HasKey(a => a.Id);
+        });
+
+        modelBuilder.Entity<StockLedgerEntry>(builder => {
+            builder.HasKey(l => l.Id);
+        });
+
+        modelBuilder.Entity<Warehouse>(builder => {
+            builder.HasKey(w => w.Id);
+            builder.Property(w => w.Name).IsRequired().HasMaxLength(120);
+        });
+
+        modelBuilder.Entity<WarehouseZone>(builder => {
+            builder.HasKey(z => z.Id);
+            builder.Property(z => z.Code).IsRequired().HasMaxLength(20);
+        });
+
         modelBuilder.Entity<Category>(builder => {
             builder.HasKey(c => c.Id);
             builder.Property(c => c.Name).IsRequired().HasMaxLength(100);
