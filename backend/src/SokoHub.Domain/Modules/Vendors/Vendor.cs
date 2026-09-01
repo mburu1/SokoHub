@@ -90,6 +90,13 @@ public sealed class Vendor : AggregateRoot
     public void AddDocument(VendorDocument document)
     {
         _documents.Add(document);
+        SetUnderReview();
+        Touch();
+    }
+
+    public void SetUnderReview()
+    {
+        Status = VendorStatus.UnderReview;
         Touch();
     }
 
