@@ -17,7 +17,7 @@ public sealed class CustomerAddress : Entity
         IsDefault = isDefault;
     }
 
-    public Guid CustomerId { get; private set; } = null!;
+    public Guid CustomerId { get; private set; } = Guid.Empty;
     public Address Address { get; private set; } = null!;
     public bool IsDefault { get; private set; }
 

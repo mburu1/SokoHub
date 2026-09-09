@@ -78,7 +78,7 @@
     {
       "code": "NU1605",
       "level": "Error",
-      "message": "Warning As Error: Detected package downgrade: Microsoft.Extensions.Configuration.Abstractions from 10.0.12 to 10.0.11. Reference the package directly from the project to select a different version. \r\n SokoHub.Infrastructure -> Microsoft.EntityFrameworkCore.Design 10.0.12 -> Microsoft.Extensions.Configuration.Abstractions (>= 10.0.12) \r\n SokoHub.Infrastructure -> Microsoft.Extensions.Configuration.Abstractions (>= 10.0.11)",
+      "message": "Warning As Error: Detected package downgrade: Microsoft.Extensions.Configuration.Abstractions from 10.0.12 to 10.0.11. Reference the package directly from the project to select a different version. \r\n SokoHub.Infrastructure -> Microsoft.EntityFrameworkCore.SqlServer 10.0.12 -> Microsoft.Extensions.Configuration.Abstractions (>= 10.0.12) \r\n SokoHub.Infrastructure -> Microsoft.Extensions.Configuration.Abstractions (>= 10.0.11)",
       "projectPath": "D:\\Mwangi Wa Mburu\\Coding\\SokoHub\\backend\\src\\SokoHub.Infrastructure\\SokoHub.Infrastructure.csproj",
       "filePath": "D:\\Mwangi Wa Mburu\\Coding\\SokoHub\\backend\\src\\SokoHub.Infrastructure\\SokoHub.Infrastructure.csproj",
       "libraryId": "Microsoft.Extensions.Configuration.Abstractions",
@@ -89,7 +89,7 @@
     {
       "code": "NU1605",
       "level": "Error",
-      "message": "Warning As Error: Detected package downgrade: Microsoft.Extensions.DependencyInjection.Abstractions from 10.0.12 to 10.0.11. Reference the package directly from the project to select a different version. \r\n SokoHub.Infrastructure -> Microsoft.EntityFrameworkCore.Design 10.0.12 -> Microsoft.Extensions.Caching.Memory 10.0.12 -> Microsoft.Extensions.DependencyInjection.Abstractions (>= 10.0.12) \r\n SokoHub.Infrastructure -> Microsoft.Extensions.DependencyInjection.Abstractions (>= 10.0.11)",
+      "message": "Warning As Error: Detected package downgrade: Microsoft.Extensions.DependencyInjection.Abstractions from 10.0.12 to 10.0.11. Reference the package directly from the project to select a different version. \r\n SokoHub.Infrastructure -> Microsoft.EntityFrameworkCore.SqlServer 10.0.12 -> Microsoft.Extensions.Caching.Memory 10.0.12 -> Microsoft.Extensions.DependencyInjection.Abstractions (>= 10.0.12) \r\n SokoHub.Infrastructure -> Microsoft.Extensions.DependencyInjection.Abstractions (>= 10.0.11)",
       "projectPath": "D:\\Mwangi Wa Mburu\\Coding\\SokoHub\\backend\\src\\SokoHub.Infrastructure\\SokoHub.Infrastructure.csproj",
       "filePath": "D:\\Mwangi Wa Mburu\\Coding\\SokoHub\\backend\\src\\SokoHub.Infrastructure\\SokoHub.Infrastructure.csproj",
       "libraryId": "Microsoft.Extensions.DependencyInjection.Abstractions",
@@ -100,7 +100,7 @@
     {
       "code": "NU1605",
       "level": "Error",
-      "message": "Warning As Error: Detected package downgrade: Microsoft.Extensions.Logging.Abstractions from 10.0.12 to 10.0.11. Reference the package directly from the project to select a different version. \r\n SokoHub.Infrastructure -> Microsoft.EntityFrameworkCore.Design 10.0.12 -> Microsoft.Extensions.Caching.Memory 10.0.12 -> Microsoft.Extensions.Logging.Abstractions (>= 10.0.12) \r\n SokoHub.Infrastructure -> Microsoft.Extensions.Logging.Abstractions (>= 10.0.11)",
+      "message": "Warning As Error: Detected package downgrade: Microsoft.Extensions.Logging.Abstractions from 10.0.12 to 10.0.11. Reference the package directly from the project to select a different version. \r\n SokoHub.Infrastructure -> Microsoft.EntityFrameworkCore.SqlServer 10.0.12 -> Microsoft.Extensions.Caching.Memory 10.0.12 -> Microsoft.Extensions.Logging.Abstractions (>= 10.0.12) \r\n SokoHub.Infrastructure -> Microsoft.Extensions.Logging.Abstractions (>= 10.0.11)",
       "projectPath": "D:\\Mwangi Wa Mburu\\Coding\\SokoHub\\backend\\src\\SokoHub.Infrastructure\\SokoHub.Infrastructure.csproj",
       "filePath": "D:\\Mwangi Wa Mburu\\Coding\\SokoHub\\backend\\src\\SokoHub.Infrastructure\\SokoHub.Infrastructure.csproj",
       "libraryId": "Microsoft.Extensions.Logging.Abstractions",
@@ -111,7 +111,7 @@
     {
       "code": "NU1605",
       "level": "Error",
-      "message": "Warning As Error: Detected package downgrade: Microsoft.Extensions.Options from 10.0.12 to 10.0.11. Reference the package directly from the project to select a different version. \r\n SokoHub.Infrastructure -> Microsoft.EntityFrameworkCore.Design 10.0.12 -> Microsoft.Extensions.Caching.Memory 10.0.12 -> Microsoft.Extensions.Options (>= 10.0.12) \r\n SokoHub.Infrastructure -> Microsoft.Extensions.Options (>= 10.0.11)",
+      "message": "Warning As Error: Detected package downgrade: Microsoft.Extensions.Options from 10.0.12 to 10.0.11. Reference the package directly from the project to select a different version. \r\n SokoHub.Infrastructure -> Microsoft.EntityFrameworkCore.SqlServer 10.0.12 -> Microsoft.Extensions.Caching.Memory 10.0.12 -> Microsoft.Extensions.Options (>= 10.0.12) \r\n SokoHub.Infrastructure -> Microsoft.Extensions.Options (>= 10.0.11)",
       "projectPath": "D:\\Mwangi Wa Mburu\\Coding\\SokoHub\\backend\\src\\SokoHub.Infrastructure\\SokoHub.Infrastructure.csproj",
       "filePath": "D:\\Mwangi Wa Mburu\\Coding\\SokoHub\\backend\\src\\SokoHub.Infrastructure\\SokoHub.Infrastructure.csproj",
       "libraryId": "Microsoft.Extensions.Options",
@@ -122,7 +122,7 @@
     {
       "code": "NU1605",
       "level": "Error",
-      "message": "Warning As Error: Detected package downgrade: Microsoft.Extensions.Primitives from 10.0.12 to 10.0.11. Reference the package directly from the project to select a different version. \r\n SokoHub.Infrastructure -> Microsoft.EntityFrameworkCore.Design 10.0.12 -> Microsoft.Extensions.Caching.Memory 10.0.12 -> Microsoft.Extensions.Primitives (>= 10.0.12) \r\n SokoHub.Infrastructure -> Microsoft.Extensions.Primitives (>= 10.0.11)",
+      "message": "Warning As Error: Detected package downgrade: Microsoft.Extensions.Primitives from 10.0.12 to 10.0.11. Reference the package directly from the project to select a different version. \r\n SokoHub.Infrastructure -> Microsoft.EntityFrameworkCore.SqlServer 10.0.12 -> Microsoft.Extensions.Caching.Memory 10.0.12 -> Microsoft.Extensions.Primitives (>= 10.0.12) \r\n SokoHub.Infrastructure -> Microsoft.Extensions.Primitives (>= 10.0.11)",
       "projectPath": "D:\\Mwangi Wa Mburu\\Coding\\SokoHub\\backend\\src\\SokoHub.Infrastructure\\SokoHub.Infrastructure.csproj",
       "filePath": "D:\\Mwangi Wa Mburu\\Coding\\SokoHub\\backend\\src\\SokoHub.Infrastructure\\SokoHub.Infrastructure.csproj",
       "libraryId": "Microsoft.Extensions.Primitives",

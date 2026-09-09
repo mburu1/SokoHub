@@ -24,10 +24,10 @@ public sealed class Vendor : AggregateRoot
         Touch();
     }
 
-    public Guid UserId { get; private set; } = null!;
+    public Guid UserId { get; private set; } = Guid.Empty;
     public string BusinessName { get; private set; } = string.Empty;
     public KraPin TaxId { get; private set; } = null!;
-    public Percentage CommissionRate { get; private set; } = null!;
+    public Percentage CommissionRate { get; private set; } = Percentage.Zero;
     public VendorStatus Status { get; private set; }
 
     public IReadOnlyList<VendorDocument> Documents => _documents.AsReadOnly();

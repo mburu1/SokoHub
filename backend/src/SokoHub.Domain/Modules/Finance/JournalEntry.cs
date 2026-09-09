@@ -32,8 +32,8 @@ public class JournalEntry : AggregateRoot
 
     public bool IsBalanced()
     {
-        var debits = _lines.Where(l => l.IsDebit).Sum(l => l.Value.Value);
-        var credits = _lines.Where(l => !l.IsDebit).Sum(l => l.Value.Value);
+        var debits = _lines.Where(l => l.IsDebit).Sum(l => l.Amount.Amount);
+        var credits = _lines.Where(l => !l.IsDebit).Sum(l => l.Amount.Amount);
         return Math.Abs(debits - credits) < 0.01m;
     }
 }

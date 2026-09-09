@@ -18,7 +18,7 @@ public sealed class VendorDocument : Entity
         UploadedAt = DateTimeOffset.UtcNow;
     }
 
-    public Guid VendorId { get; private set; } = null!;
+    public Guid VendorId { get; private set; } = Guid.Empty;
     public string DocumentType { get; private set; } = string.Empty;
     public string DocumentUrl { get; private set; } = string.Empty;
     public string Checksum { get; private set; } = string.Empty;

@@ -12,8 +12,8 @@ public sealed class PaymentReconciliation : AggregateRoot
         StatementDate = statementDate;
         ExpectedTotal = expected;
         ActualTotal = actual;
-        Variance = new Money(Math.Abs(expected.Value - actual.Value), expected.Currency);
-        IsBalanced = expected.Value == actual.Value;
+        Variance = new Money(Math.Abs(expected.Amount - actual.Amount), expected.Currency);
+        IsBalanced = expected.Amount == actual.Amount;
     }
 
     public DateOnly StatementDate { get; private set; }

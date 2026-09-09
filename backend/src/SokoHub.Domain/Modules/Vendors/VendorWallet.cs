@@ -30,7 +30,7 @@ public sealed class VendorWallet : Entity
 
     public void Debit(Money amount)
     {
-        Ensure.That(Balance.Value >= amount.Value, "insufficient_funds", "Insufficient wallet balance.");
+        Ensure.That(Balance.Amount >= amount.Amount, "insufficient_funds", "Insufficient wallet balance.");
         Balance = Balance.Subtract(amount);
     }
 }

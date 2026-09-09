@@ -16,7 +16,7 @@ public sealed class CustomerPreference : Entity
         Value = value;
     }
 
-    public Guid CustomerId { get; private set; } = null!;
+    public Guid CustomerId { get; private set; } = Guid.Empty;
     public string Key { get; private set; } = string.Empty;
     public string Value { get; private set; } = string.Empty;
 }

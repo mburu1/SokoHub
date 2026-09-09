@@ -33,13 +33,13 @@ public class PricingService : IPricingService
         foreach (var item in items)
         {
             // In a real scenario, we'd fetch the variant and apply potential item-level coupons
-            subtotal += item.UnitPrice.Value * item.Quantity;
+            subtotal += item.UnitPrice.Amount * item.Quantity;
         }
 
         // Apply order-level coupon
         if (coupon != null)
         {
-            subtotal -= coupon.CalculateDiscount(subtotal);
+            subtotal -= coupon.CalculateDiscount(subtotal).Amount;
         }
 
         // Apply tax

@@ -43,7 +43,7 @@ public sealed class Payment : AggregateRoot
 
     public Money RefundedTotal => _refunds
         .Where(r => r.IsSucceeded)
-        .Aggregate(Money.Zero(Amount.Currency), (sum, refund) => sum + refund.Value);
+        .Aggregate(Money.Zero(Amount.Currency), (sum, refund) => sum + refund.Amount);
 
     public static Payment Create(
         Guid orderId,
@@ -101,7 +101,7 @@ public sealed class Payment : AggregateRoot
             if (paidAmount is { } actual)
             {
                 Ensure.That(actual.Currency == Amount.Currency, "currency_mismatch", "Callback amount currency mismatch.");
-                Ensure.That(actual.Value == Amount.Value, "payment_amount_mismatch", "Paid amount does not match the payment.");
+                Ensure.That(actual.Amount == Amount.Amount, "payment_amount_mismatch", "Paid amount does not match the payment.");
             }
 
             Status = PaymentStatus.Succeeded;

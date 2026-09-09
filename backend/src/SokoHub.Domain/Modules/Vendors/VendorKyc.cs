@@ -17,7 +17,7 @@ public sealed class VendorKyc : Entity
         SubmittedAt = DateTimeOffset.UtcNow;
     }
 
-    public Guid VendorId { get; private set; } = null!;
+    public Guid VendorId { get; private set; } = Guid.Empty;
     public VendorStatus Status { get; private set; }
     public DateTimeOffset SubmittedAt { get; private set; }
     public DateTimeOffset? VerifiedAt { get; private set; }
