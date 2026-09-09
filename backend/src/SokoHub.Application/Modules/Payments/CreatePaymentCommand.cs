@@ -4,6 +4,8 @@ using SokoHub.Domain.Interfaces;
 using SokoHub.Domain.Modules.Payments;
 using SokoHub.Domain.Common.ValueObjects;
 using SokoHub.Application.Common.Interfaces;
+using SokoHub.Application.Common.Results;
+using SokoHub.Application.Common.Errors;
 
 namespace SokoHub.Application.Modules.Payments;
 
@@ -11,9 +13,9 @@ public record CreatePaymentCommand(
     Guid OrderId,
     Guid CustomerId,
     Money Amount,
-    PaymentMethod Method) : IRequest<PaymentResponse>;
+    PaymentMethod Method) : IRequest<Result<PaymentResponse>>;
 
-public sealed class CreatePaymentHandler : IRequestHandler<CreatePaymentCommand, PaymentResponse>
+public sealed class CreatePaymentHandler : IRequestHandler<CreatePaymentCommand, Result<PaymentResponse>>
 {
     private readonly IUnitOfWork _unitOfWork;
 
@@ -22,24 +24,24 @@ public sealed class CreatePaymentHandler : IRequestHandler<CreatePaymentCommand,
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<PaymentResponse> Handle(CreatePaymentCommand request, CancellationToken cancellationToken)
+    public async Task<Result<PaymentResponse>> Handle(CreatePaymentCommand request, CancellationToken cancellationToken)
     {
         var payment = Payment.Create(
             request.OrderId,
             request.CustomerId,
-            request.Amount,
+            request.Value,
             request.Method);
 
         await _unitOfWork.Repository<Payment>().AddAsync(payment, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return new PaymentResponse(
+        return Result<PaymentResponse>.Success(new PaymentResponse(
             payment.Id,
             payment.OrderId,
-            payment.Amount.Value,
-            payment.Amount.Currency,
+            payment.Value.Value,
+            payment.Value.Currency,
             payment.Method.ToString(),
             payment.Status.ToString(),
-            payment.Reference.Value);
+            payment.Reference.Value));
     }
 }

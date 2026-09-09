@@ -27,7 +27,7 @@ public sealed class InitiatePaymentHandler : IRequestHandler<InitiatePaymentComm
         var payment = Payment.Create(
             request.OrderId,
             Guid.Empty, // CustomerId from Order
-            Money.Create(request.Amount),
+            Money.Create(request.Value),
             PaymentMethod.MpesaStk);
 
         payment.InitiateMpesaStk(
@@ -42,6 +42,6 @@ public sealed class InitiatePaymentHandler : IRequestHandler<InitiatePaymentComm
             payment.Id,
             payment.Reference.Value,
             payment.Status.ToString(),
-            payment.Amount.Amount);
+            payment.Value.Value);
     }
 }

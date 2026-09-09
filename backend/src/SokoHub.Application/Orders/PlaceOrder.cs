@@ -49,7 +49,7 @@ public sealed class PlaceOrderHandler : IRequestHandler<PlaceOrderCommand, Order
             order.Id,
             order.Number.Value,
             order.Status.ToString(),
-            order.GrandTotal.Amount,
+            order.GrandTotal.Value,
             DateTimeOffset.UtcNow,
             []);
     }

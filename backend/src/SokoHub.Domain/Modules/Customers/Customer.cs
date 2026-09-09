@@ -18,13 +18,12 @@ public sealed class Customer : AggregateRoot
         UserId = userId;
         Email = email;
         Phone = phone;
-        CreatedAt = DateTimeOffset.UtcNow;
+        Touch();
     }
 
     public Guid UserId { get; private set; } = null!;
     public EmailAddress Email { get; private set; } = null!;
     public PhoneNumber Phone { get; private set; } = null!;
-    public DateTimeOffset CreatedAt { get; private set; }
 
     public IReadOnlyList<CustomerAddress> Addresses => _addresses.AsReadOnly();
     public IReadOnlyList<CustomerPreference> Preferences => _preferences.AsReadOnly();

@@ -2,15 +2,17 @@ using MediatR;
 using SokoHub.Domain.Interfaces;
 using SokoHub.Domain.Modules.Payments;
 using SokoHub.Domain.Common.ValueObjects;
+using SokoHub.Application.Common.Results;
+using SokoHub.Application.Common.Errors;
 
 namespace SokoHub.Application.Modules.Payments;
 
 public record RefundPaymentCommand(
     Guid PaymentId,
     Money RefundAmount,
-    string Reason) : IRequest<bool>;
+    string Reason) : IRequest<Result>;
 
-public sealed class RefundPaymentHandler : IRequestHandler<RefundPaymentCommand, bool>
+public sealed class RefundPaymentHandler : IRequestHandler<RefundPaymentCommand, Result>
 {
     private readonly IUnitOfWork _unitOfWork;
 
@@ -19,19 +21,26 @@ public sealed class RefundPaymentHandler : IRequestHandler<RefundPaymentCommand,
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<bool> Handle(RefundPaymentCommand request, CancellationToken cancellationToken)
+    public async Task<Result> Handle(RefundPaymentCommand request, CancellationToken cancellationToken)
     {
         var payment = await _unitOfWork.Repository<Payment>().GetByIdAsync(request.PaymentId, cancellationToken);
 
         if (payment == null)
         {
-            throw new KeyNotFoundException("Payment not found.");
+            return Result.Failure(new ApplicationError("payment_not_found", "Payment not found."));
         }
 
-        payment.Refund(request.RefundAmount, request.Reason);
+        try
+        {
+            payment.Refund(request.RefundAmount, request.Reason);
+        }
+        catch (Exception ex)
+        {
+            return Result.Failure(new ApplicationError("refund_failed", ex.Message));
+        }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return true;
+        return Result.Success();
     }
 }

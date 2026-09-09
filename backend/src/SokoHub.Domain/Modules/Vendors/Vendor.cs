@@ -21,7 +21,7 @@ public sealed class Vendor : AggregateRoot
         TaxId = taxId;
         CommissionRate = commissionRate;
         Status = VendorStatus.Pending;
-        CreatedAt = DateTimeOffset.UtcNow;
+        Touch();
     }
 
     public Guid UserId { get; private set; } = null!;
@@ -29,8 +29,6 @@ public sealed class Vendor : AggregateRoot
     public KraPin TaxId { get; private set; } = null!;
     public Percentage CommissionRate { get; private set; } = null!;
     public VendorStatus Status { get; private set; }
-    public DateTimeOffset CreatedAt { get; private set; }
-    public DateTimeOffset? UpdatedAt { get; private set; }
 
     public IReadOnlyList<VendorDocument> Documents => _documents.AsReadOnly();
     public IReadOnlyList<VendorSettlement> Settlements => _settlements.AsReadOnly();

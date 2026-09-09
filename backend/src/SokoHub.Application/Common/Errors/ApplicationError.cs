@@ -1,5 +1,3 @@
 namespace SokoHub.Application.Common.Errors;
 
-public class ApplicationError
-{
-}
+public record ApplicationError(string Code, string Description);

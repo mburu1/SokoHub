@@ -27,14 +27,14 @@ public readonly record struct Money : IComparable<Money>
     public Money Add(Money other)
     {
         EnsureSameCurrency(other);
-        return new Money(Amount + other.Amount, Currency);
+        return new Money(Amount + other.Value, Currency);
     }
 
     public Money Subtract(Money other)
     {
         EnsureSameCurrency(other);
-        Ensure.That(Amount >= other.Amount, "money_insufficient", "Resulting amount cannot be negative.");
-        return new Money(Amount - other.Amount, Currency);
+        Ensure.That(Amount >= other.Value, "money_insufficient", "Resulting amount cannot be negative.");
+        return new Money(Amount - other.Value, Currency);
     }
 
     public Money Multiply(decimal factor)
@@ -48,7 +48,7 @@ public readonly record struct Money : IComparable<Money>
     public int CompareTo(Money other)
     {
         EnsureSameCurrency(other);
-        return Amount.CompareTo(other.Amount);
+        return Amount.CompareTo(other.Value);
     }
 
     public static Money operator +(Money left, Money right) => left.Add(right);

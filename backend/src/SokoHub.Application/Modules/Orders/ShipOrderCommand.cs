@@ -1,5 +1,42 @@
+using MediatR;
+using SokoHub.Domain.Modules.Orders;
+using SokoHub.Domain.Interfaces;
+using SokoHub.Application.Common.Results;
+using SokoHub.Application.Common.Errors;
+
 namespace SokoHub.Application.Modules.Orders;
 
-public class ShipOrderCommand
+public record ShipOrderCommand(Guid OrderId) : IRequest<Result>;
+
+public sealed class ShipOrderHandler : IRequestHandler<ShipOrderCommand, Result>
 {
+    private readonly IUnitOfWork _unitOfWork;
+
+    public ShipOrderHandler(IUnitOfWork unitOfWork)
+    {
+        _unitOfWork = unitOfWork;
+    }
+
+    public async Task<Result> Handle(ShipOrderCommand request, CancellationToken cancellationToken)
+    {
+        var order = await _unitOfWork.Repository<Order>().GetByIdAsync(request.OrderId, cancellationToken);
+
+        if (order == null)
+        {
+            return Result.Failure(new ApplicationError("order_not_found", "Order not found."));
+        }
+
+        try
+        {
+            order.Ship();
+        }
+        catch (Exception ex)
+        {
+            return Result.Failure(new ApplicationError("ship_failed", ex.Message));
+        }
+
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return Result.Success();
+    }
 }

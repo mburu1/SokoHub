@@ -2,6 +2,8 @@ using MediatR;
 using SokoHub.Domain.Interfaces;
 using SokoHub.Domain.Modules.Inventory;
 using SokoHub.Application.Common.Interfaces;
+using SokoHub.Application.Common.Results;
+using SokoHub.Application.Common.Errors;
 
 namespace SokoHub.Application.Modules.Inventory;
 
@@ -9,9 +11,9 @@ public record AdjustStockCommand(
     Guid InventoryItemId,
     int Delta,
     AdjustmentReason Reason,
-    string Note) : IRequest<bool>;
+    string Note) : IRequest<Result>;
 
-public sealed class AdjustStockHandler : IRequestHandler<AdjustStockCommand, bool>
+public sealed class AdjustStockHandler : IRequestHandler<AdjustStockCommand, Result>
 {
     private readonly IUnitOfWork _unitOfWork;
 
@@ -20,19 +22,26 @@ public sealed class AdjustStockHandler : IRequestHandler<AdjustStockCommand, boo
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<bool> Handle(AdjustStockCommand request, CancellationToken cancellationToken)
+    public async Task<Result> Handle(AdjustStockCommand request, CancellationToken cancellationToken)
     {
         var item = await _unitOfWork.Repository<InventoryItem>().GetByIdAsync(request.InventoryItemId, cancellationToken);
 
         if (item == null)
         {
-            throw new KeyNotFoundException("Inventory item not found.");
+            return Result.Failure(new ApplicationError("inventory_item_not_found", "Inventory item not found."));
         }
 
-        item.Adjust(request.Delta, request.Reason, request.Note);
+        try
+        {
+            item.Adjust(request.Delta, request.Reason, request.Note);
+        }
+        catch (Exception ex)
+        {
+            return Result.Failure(new ApplicationError("adjustment_failed", ex.Message));
+        }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return true;
+        return Result.Success();
     }
 }

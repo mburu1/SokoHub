@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SokoHub.Domain.Interfaces;
+using SokoHub.Domain.Common.Entities;
 
 namespace SokoHub.Infrastructure.Persistence.Mssql;
 
@@ -13,7 +14,7 @@ public class MssqlUnitOfWork : IUnitOfWork
         _context = context;
     }
 
-    public IRepository<TEntity> Repository<TEntity>() where TEntity : class
+    public IRepository<TEntity> Repository<TEntity>() where TEntity : Entity
     {
         var type = typeof(TEntity);
         if (!_repositories.ContainsKey(type))

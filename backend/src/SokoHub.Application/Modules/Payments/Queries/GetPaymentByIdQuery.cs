@@ -28,8 +28,8 @@ public sealed class GetPaymentByIdHandler : IRequestHandler<GetPaymentByIdQuery,
         return new PaymentResponse(
             payment.Id,
             payment.OrderId,
-            payment.Amount.Value,
-            payment.Amount.Currency,
+            payment.Value.Value,
+            payment.Value.Currency,
             payment.Method.ToString(),
             payment.Status.ToString(),
             payment.Reference.Value);

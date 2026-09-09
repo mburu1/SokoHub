@@ -1,4 +1,4 @@
-using SokoHub.Domain.Common.Entity;
+using SokoHub.Domain.Common.Entities;
 
 namespace SokoHub.Domain.Modules.Identity;
 

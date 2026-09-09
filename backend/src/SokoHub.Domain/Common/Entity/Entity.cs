@@ -1,4 +1,4 @@
-namespace SokoHub.Domain.Common.Entity;
+namespace SokoHub.Domain.Common.Entities;
 
 public abstract class Entity : IEquatable<Entity>
 {

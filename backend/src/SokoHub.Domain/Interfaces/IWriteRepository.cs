@@ -1,7 +1,7 @@
 namespace SokoHub.Domain.Interfaces;
 
 public interface IWriteRepository<T>
-    where T : AggregateRoot
+    where T : Entity
 {
     Task AddAsync(T aggregate, CancellationToken cancellationToken = default);
 

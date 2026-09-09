@@ -4,15 +4,17 @@ using SokoHub.Domain.Common.Specifications;
 using SokoHub.Domain.Common.ValueObjects;
 using SokoHub.Domain.Modules.Identity;
 using SokoHub.Application.Common.Interfaces;
+using SokoHub.Application.Common.Results;
+using SokoHub.Application.Common.Errors;
 using SokoHub.Domain.Interfaces;
 
 namespace SokoHub.Application.Auth;
 
 public record LoginUserCommand(
     string Email,
-    string Password) : IRequest<AuthResponse>;
+    string Password) : IRequest<Result<AuthResponse>>;
 
-public sealed class LoginUserHandler : IRequestHandler<LoginUserCommand, AuthResponse>
+public sealed class LoginUserHandler : IRequestHandler<LoginUserCommand, Result<AuthResponse>>
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly IPasswordHasher _passwordHasher;
@@ -25,7 +27,7 @@ public sealed class LoginUserHandler : IRequestHandler<LoginUserCommand, AuthRes
         _jwtProvider = jwtProvider;
     }
 
-    public async Task<AuthResponse> Handle(LoginUserCommand request, CancellationToken cancellationToken)
+    public async Task<Result<AuthResponse>> Handle(LoginUserCommand request, CancellationToken cancellationToken)
     {
         var email = EmailAddress.Create(request.Email);
         var spec = new UserByEmailSpecification(email);
@@ -33,7 +35,7 @@ public sealed class LoginUserHandler : IRequestHandler<LoginUserCommand, AuthRes
 
         if (user == null || !_passwordHasher.VerifyPassword(request.Password, user.PasswordHash))
         {
-            throw new UnauthorizedAccessException("Invalid credentials");
+            return Result<AuthResponse>.Failure(new ApplicationError("auth_invalid_credentials", "Invalid email or password"));
         }
 
         user.RecordSuccessfulAccess();
@@ -45,12 +47,12 @@ public sealed class LoginUserHandler : IRequestHandler<LoginUserCommand, AuthRes
         await _unitOfWork.Repository<RefreshToken>().AddAsync(refresh, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return new AuthResponse(
+        return Result<AuthResponse>.Success(new AuthResponse(
             token.AccessToken,
             refresh.TokenHash,
             new[] { token.Expiration },
             user.Id,
-            user.Email.Value);
+            user.Email.Value));
     }
 }
 

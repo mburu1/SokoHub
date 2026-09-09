@@ -2,6 +2,8 @@ using MediatR;
 using SokoHub.Domain.Interfaces;
 using SokoHub.Domain.Modules.Vendors;
 using SokoHub.Application.Common.Interfaces;
+using SokoHub.Application.Common.Results;
+using SokoHub.Application.Common.Errors;
 
 namespace SokoHub.Application.Modules.Vendors;
 
@@ -9,9 +11,9 @@ public record SubmitKycCommand(
     Guid VendorId,
     string DocumentType,
     string DocumentUrl,
-    string Checksum) : IRequest<bool>;
+    string Checksum) : IRequest<Result>;
 
-public sealed class SubmitKycHandler : IRequestHandler<SubmitKycCommand, bool>
+public sealed class SubmitKycHandler : IRequestHandler<SubmitKycCommand, Result>
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUser _currentUser;
@@ -22,18 +24,18 @@ public sealed class SubmitKycHandler : IRequestHandler<SubmitKycCommand, bool>
         _currentUser = currentUser;
     }
 
-    public async Task<bool> Handle(SubmitKycCommand request, CancellationToken cancellationToken)
+    public async Task<Result> Handle(SubmitKycCommand request, CancellationToken cancellationToken)
     {
         var vendor = await _unitOfWork.Repository<Vendor>().GetByIdAsync(request.VendorId, cancellationToken);
 
         if (vendor == null)
         {
-            throw new KeyNotFoundException("Vendor not found.");
+            return Result.Failure(new ApplicationError("vendor_not_found", "Vendor not found."));
         }
 
         if (vendor.UserId != _currentUser.Id)
         {
-            throw new UnauthorizedAccessException("You can only submit KYC for your own vendor account.");
+            return Result.Failure(new ApplicationError("unauthorized", "You can only submit KYC for your own vendor account."));
         }
 
         var document = new VendorDocument(
@@ -45,13 +47,9 @@ public sealed class SubmitKycHandler : IRequestHandler<SubmitKycCommand, bool>
 
         vendor.AddDocument(document);
 
-        // In a real scenario, we might change status to UnderReview here.
-        // Let's assume the domain entity has a method for this.
-        // Actually, let's add a method to Vendor to set status to UnderReview when first document is uploaded.
-
         await _unitOfWork.Repository<VendorDocument>().AddAsync(document, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return true;
+        return Result.Success();
     }
 }

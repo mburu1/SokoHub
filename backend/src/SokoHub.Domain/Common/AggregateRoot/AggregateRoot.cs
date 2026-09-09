@@ -1,6 +1,6 @@
-namespace SokoHub.Domain.Common.AggregateRoot;
+namespace SokoHub.Domain.Common.AggregateRoots;
 
-public abstract class AggregateRoot : Entity
+public abstract class AggregateRoot : SokoHub.Domain.Common.Entities.Entity
 {
     private readonly List<IDomainEvent> _domainEvents = [];
 

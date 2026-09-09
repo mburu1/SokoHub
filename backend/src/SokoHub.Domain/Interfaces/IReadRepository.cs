@@ -1,7 +1,7 @@
 namespace SokoHub.Domain.Interfaces;
 
 public interface IReadRepository<T>
-    where T : AggregateRoot
+    where T : Entity
 {
     Task<T?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 

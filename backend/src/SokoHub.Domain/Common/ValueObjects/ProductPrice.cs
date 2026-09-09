@@ -20,7 +20,7 @@ public sealed record ProductPrice
         if (salePrice is { } sale)
         {
             Ensure.That(sale.Currency == listPrice.Currency, "currency_mismatch", "Sale price currency must match list price.");
-            Ensure.That(sale.Amount < listPrice.Amount, "sale_price", "Sale price must be less than list price.");
+            Ensure.That(sale.Value < listPrice.Value, "sale_price", "Sale price must be less than list price.");
             if (saleStartsAt is not null && saleEndsAt is not null)
             {
                 Ensure.That(saleEndsAt > saleStartsAt, "sale_window", "Sale end must be after sale start.");

@@ -5,6 +5,8 @@ using SokoHub.Domain.Modules.Orders;
 using SokoHub.Domain.Common.ValueObjects;
 using SokoHub.Application.Common.Interfaces;
 using SokoHub.Domain.Modules.Inventory;
+using SokoHub.Application.Common.Results;
+using SokoHub.Application.Common.Errors;
 
 namespace SokoHub.Application.Modules.Orders;
 
@@ -14,9 +16,9 @@ public record PlaceOrderCommand(
     IReadOnlyList<OrderLineDraft> Lines,
     Money ShippingTotal,
     Money DiscountTotal,
-    Percentage TaxRate) : IRequest<OrderResponse>;
+    Percentage TaxRate) : IRequest<Result<OrderResponse>>;
 
-public sealed class PlaceOrderHandler : IRequestHandler<PlaceOrderCommand, OrderResponse>
+public sealed class PlaceOrderHandler : IRequestHandler<PlaceOrderCommand, Result<OrderResponse>>
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUser _currentUser;
@@ -27,29 +29,34 @@ public sealed class PlaceOrderHandler : IRequestHandler<PlaceOrderCommand, Order
         _currentUser = currentUser;
     }
 
-    public async Task<OrderResponse> Handle(PlaceOrderCommand request, CancellationToken cancellationToken)
+    public async Task<Result<OrderResponse>> Handle(PlaceOrderCommand request, CancellationToken cancellationToken)
     {
         if (request.CustomerId != _currentUser.Id)
         {
-            throw new UnauthorizedAccessException("You can only place orders for yourself.");
+            return Result<OrderResponse>.Failure(new ApplicationError("unauthorized", "You can only place orders for yourself."));
         }
 
         // 1. Reserve Stock
         var reservations = new List<Guid>();
         foreach (var line in request.Lines)
         {
-            // We need to find the InventoryItem for this variant in the relevant warehouse.
-            // For simplicity, assume a default warehouse.
             var inventoryItem = await _unitOfWork.Repository<InventoryItem>().SingleAsync(
                 new InventoryItemByVariantSpecification(line.VariantId), cancellationToken);
 
             if (inventoryItem == null)
             {
-                throw new InvalidOperationException($"Product {line.ProductName} is not available in stock.");
+                return Result<OrderResponse>.Failure(new ApplicationError("stock_unavailable", $"Product {line.ProductName} is not available in stock."));
             }
 
-            var res = inventoryItem.Reserve(_currentUser.Id.Value, line.Quantity, DateTimeOffset.UtcNow.AddMinutes(30));
-            reservations.Add(res.Id);
+            try
+            {
+                var res = inventoryItem.Reserve(_currentUser.Id, line.Quantity, DateTimeOffset.UtcNow.AddMinutes(30));
+                reservations.Add(res.Id);
+            }
+            catch (Exception ex)
+            {
+                return Result<OrderResponse>.Failure(new ApplicationError("stock_reservation_failed", ex.Message));
+            }
         }
 
         // 2. Create Order
@@ -66,14 +73,14 @@ public sealed class PlaceOrderHandler : IRequestHandler<PlaceOrderCommand, Order
         await _unitOfWork.Repository<Order>().AddAsync(order, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return new OrderResponse(
+        return Result<OrderResponse>.Success(new OrderResponse(
             order.Id,
             order.Number.Value,
             order.CustomerId,
             order.Status.ToString(),
             order.GrandTotal.Value,
             order.Currency,
-            DateTimeOffset.UtcNow);
+            DateTimeOffset.UtcNow));
     }
 }
 

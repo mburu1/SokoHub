@@ -3,6 +3,8 @@ using SokoHub.Contracts.Auth;
 using SokoHub.Domain.Common.ValueObjects;
 using SokoHub.Domain.Modules.Identity;
 using SokoHub.Application.Common.Interfaces;
+using SokoHub.Application.Common.Results;
+using SokoHub.Application.Common.Errors;
 using SokoHub.Domain.Interfaces;
 
 namespace SokoHub.Application.Auth;
@@ -11,9 +13,9 @@ public record RegisterUserCommand(
     string Email,
     string Phone,
     string DisplayName,
-    string Password) : IRequest<AuthResponse>;
+    string Password) : IRequest<Result<AuthResponse>>;
 
-public sealed class RegisterUserHandler : IRequestHandler<RegisterUserCommand, AuthResponse>
+public sealed class RegisterUserHandler : IRequestHandler<RegisterUserCommand, Result<AuthResponse>>
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly IPasswordHasher _passwordHasher;
@@ -26,7 +28,7 @@ public sealed class RegisterUserHandler : IRequestHandler<RegisterUserCommand, A
         _jwtProvider = jwtProvider;
     }
 
-    public async Task<AuthResponse> Handle(RegisterUserCommand request, CancellationToken cancellationToken)
+    public async Task<Result<AuthResponse>> Handle(RegisterUserCommand request, CancellationToken cancellationToken)
     {
         var email = EmailAddress.Create(request.Email);
         var phone = PhoneNumber.Create(request.Phone);
@@ -43,11 +45,11 @@ public sealed class RegisterUserHandler : IRequestHandler<RegisterUserCommand, A
         await _unitOfWork.Repository<RefreshToken>().AddAsync(refresh, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return new AuthResponse(
+        return Result<AuthResponse>.Success(new AuthResponse(
             token.AccessToken,
             refresh.TokenHash,
             new[] { token.Expiration },
             user.Id,
-            user.Email.Value);
+            user.Email.Value));
     }
 }

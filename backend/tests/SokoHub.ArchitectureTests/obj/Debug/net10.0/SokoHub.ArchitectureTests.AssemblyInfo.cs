@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("SokoHub.ArchitectureTests")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+d5dbacffa2b9af1e7fb4fe4e4d8ea0417923d1bf")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+bfc2786a835fc31384a23410b04c470d87b1d491")]
 [assembly: System.Reflection.AssemblyProductAttribute("SokoHub.ArchitectureTests")]
 [assembly: System.Reflection.AssemblyTitleAttribute("SokoHub.ArchitectureTests")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

@@ -14,13 +14,13 @@ public sealed class VendorWallet : Entity
     {
         VendorId = vendorId;
         MpesaPhoneNumber = Ensure.NotBlank(mpesaPhoneNumber);
-        Balance = Money.Zero;
+        Balance = Money.Zero();
         Currency = "KES";
     }
 
-    public Guid VendorId { get; private set; } = null!;
+    public Guid VendorId { get; private set; } = Guid.Empty;
     public string MpesaPhoneNumber { get; private set; } = string.Empty;
-    public Money Balance { get; private set; } = null!;
+    public Money Balance { get; private set; } = Money.Zero();
     public string Currency { get; private set; } = "KES";
 
     public void Credit(Money amount)
@@ -30,7 +30,7 @@ public sealed class VendorWallet : Entity
 
     public void Debit(Money amount)
     {
-        Ensure.That(Balance.Amount >= amount.Amount, "insufficient_funds", "Insufficient wallet balance.");
+        Ensure.That(Balance.Value >= amount.Value, "insufficient_funds", "Insufficient wallet balance.");
         Balance = Balance.Subtract(amount);
     }
 }

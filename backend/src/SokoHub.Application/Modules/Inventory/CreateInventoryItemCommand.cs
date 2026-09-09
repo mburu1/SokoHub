@@ -3,6 +3,8 @@ using SokoHub.Domain.Interfaces;
 using SokoHub.Domain.Modules.Catalog;
 using SokoHub.Domain.Modules.Inventory;
 using SokoHub.Application.Common.Interfaces;
+using SokoHub.Application.Common.Results;
+using SokoHub.Application.Common.Errors;
 
 namespace SokoHub.Application.Modules.Inventory;
 
@@ -10,9 +12,9 @@ public record CreateInventoryItemCommand(
     Guid WarehouseId,
     Guid VariantId,
     string Sku,
-    int InitialQuantity) : IRequest<Guid>;
+    int InitialQuantity) : IRequest<Result<Guid>>;
 
-public sealed class CreateInventoryItemHandler : IRequestHandler<CreateInventoryItemCommand, Guid>
+public sealed class CreateInventoryItemHandler : IRequestHandler<CreateInventoryItemCommand, Result<Guid>>
 {
     private readonly IUnitOfWork _unitOfWork;
 
@@ -21,18 +23,18 @@ public sealed class CreateInventoryItemHandler : IRequestHandler<CreateInventory
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<Guid> Handle(CreateInventoryItemCommand request, CancellationToken cancellationToken)
+    public async Task<Result<Guid>> Handle(CreateInventoryItemCommand request, CancellationToken cancellationToken)
     {
         var variant = await _unitOfWork.Repository<ProductVariant>().GetByIdAsync(request.VariantId, cancellationToken);
         if (variant == null)
         {
-            throw new KeyNotFoundException("Product variant not found.");
+            return Result<Guid>.Failure(new ApplicationError("variant_not_found", "Product variant not found."));
         }
 
         var warehouse = await _unitOfWork.Repository<Warehouse>().GetByIdAsync(request.WarehouseId, cancellationToken);
         if (warehouse == null)
         {
-            throw new KeyNotFoundException("Warehouse not found.");
+            return Result<Guid>.Failure(new ApplicationError("warehouse_not_found", "Warehouse not found."));
         }
 
         var item = InventoryItem.Open(
@@ -44,6 +46,6 @@ public sealed class CreateInventoryItemHandler : IRequestHandler<CreateInventory
         await _unitOfWork.Repository<InventoryItem>().AddAsync(item, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return item.Id;
+        return Result<Guid>.Success(item.Id);
     }
 }

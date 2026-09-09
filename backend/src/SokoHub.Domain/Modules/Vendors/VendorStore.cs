@@ -20,7 +20,7 @@ public sealed class VendorStore : Entity
         IsActive = true;
     }
 
-    public Guid VendorId { get; private set; } = null!;
+    public Guid VendorId { get; private set; } = Guid.Empty;
     public string StoreName { get; private set; } = string.Empty;
     public string Description { get; private set; } = string.Empty;
     public string LogoUrl { get; private set; } = string.Empty;
