@@ -2,8 +2,10 @@ using MediatR;
 using SokoHub.Domain.Interfaces;
 using SokoHub.Domain.Modules.Shipping;
 using SokoHub.Domain.Modules.Orders;
+using SokoHub.Domain.Modules.Vendors;
 using SokoHub.Application.Common.Results;
 using SokoHub.Application.Common.Errors;
+using SokoHub.Domain.Common.ValueObjects;
 
 namespace SokoHub.Application.Modules.Shipping;
 
@@ -27,7 +29,29 @@ public sealed class CreateShipmentHandler : IRequestHandler<CreateShipmentComman
             return Result<Guid>.Failure(new ApplicationError("order_not_found", "Order not found."));
         }
 
-        var shipment = Shipment.Create(order);
+        var firstVendorOrder = order.VendorOrders.FirstOrDefault();
+        if (firstVendorOrder == null)
+        {
+            return Result<Guid>.Failure(new ApplicationError("vendor_order_not_found", "No vendor order found."));
+        }
+
+        var vendor = await _unitOfWork.Repository<Vendor>().GetByIdAsync(firstVendorOrder.VendorId, cancellationToken);
+        if (vendor == null)
+        {
+            return Result<Guid>.Failure(new ApplicationError("vendor_not_found", "Vendor not found."));
+        }
+
+        var origin = Address.Create("SokoHub Warehouse", "Nairobi", "Nairobi", "00100", "KE");
+        var destination = order.ShippingAddress;
+        var cost = Money.Zero("KES");
+
+        var shipment = Shipment.Create(
+            order.Id,
+            vendor.Id,
+            Guid.Empty, // courier will be assigned later
+            origin,
+            destination,
+            cost);
 
         await _unitOfWork.Repository<Shipment>().AddAsync(shipment, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);

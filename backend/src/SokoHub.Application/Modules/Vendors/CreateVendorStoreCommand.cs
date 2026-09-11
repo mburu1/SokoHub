@@ -2,6 +2,7 @@ using MediatR;
 using SokoHub.Domain.Interfaces;
 using SokoHub.Domain.Modules.Vendors;
 using SokoHub.Application.Common.Interfaces;
+using SokoHub.Domain.Enums;
 
 namespace SokoHub.Application.Modules.Vendors;
 

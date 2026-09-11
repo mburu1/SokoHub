@@ -33,7 +33,7 @@ public sealed class GetListHandler : IRequestHandler<GetListQuery, PagedResult<V
             v.CommissionRate.Value,
             v.Status.ToString())).ToList();
 
-        return new PagedResult<VendorResponse>(response, total, request.PagedRequest);
+        return new PagedResult<VendorResponse>(response, total, request.PagedRequest.Page, request.PagedRequest.PageSize);
     }
 }
 

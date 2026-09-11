@@ -38,7 +38,7 @@ public sealed class AddProductVariantHandler : IRequestHandler<AddProductVariant
         return new ProductVariantResponse(
             variant.Id,
             variant.Sku.Value,
-            variant.Price.Amount,
+            variant.Price.ListPrice.Amount,
             variant.WeightGrams,
             variant.IsActive);
     }

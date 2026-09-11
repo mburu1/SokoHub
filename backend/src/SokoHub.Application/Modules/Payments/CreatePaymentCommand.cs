@@ -29,7 +29,7 @@ public sealed class CreatePaymentHandler : IRequestHandler<CreatePaymentCommand,
         var payment = Payment.Create(
             request.OrderId,
             request.CustomerId,
-            request.Value,
+            request.Amount,
             request.Method);
 
         await _unitOfWork.Repository<Payment>().AddAsync(payment, cancellationToken);
@@ -38,8 +38,8 @@ public sealed class CreatePaymentHandler : IRequestHandler<CreatePaymentCommand,
         return Result<PaymentResponse>.Success(new PaymentResponse(
             payment.Id,
             payment.OrderId,
-            payment.Value.Value,
-            payment.Value.Currency,
+            payment.Amount.Amount,
+            payment.Amount.Currency,
             payment.Method.ToString(),
             payment.Status.ToString(),
             payment.Reference.Value));

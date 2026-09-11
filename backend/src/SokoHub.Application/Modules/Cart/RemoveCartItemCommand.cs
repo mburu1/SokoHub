@@ -23,8 +23,9 @@ public sealed class RemoveCartItemHandler : IRequestHandler<RemoveCartItemComman
 
     public async Task<Result> Handle(RemoveCartItemCommand request, CancellationToken cancellationToken)
     {
+        var userId = _currentUser.Id ?? throw new UnauthorizedAccessException("User not authenticated");
         var cart = await _unitOfWork.Repository<DomainCart.Cart>().SingleAsync(
-            new CartByUserIdSpecification(_currentUser.Id), cancellationToken);
+            new CartByUserIdSpecification(userId), cancellationToken);
 
         if (cart == null)
         {

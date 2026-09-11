@@ -15,6 +15,8 @@ public sealed partial record KraPin
         return new KraPin(normalized);
     }
 
+    public static KraPin Create(string value) => Parse(value);
+
     public override string ToString() => Value;
 
     public static implicit operator string(KraPin pin) => pin.Value;

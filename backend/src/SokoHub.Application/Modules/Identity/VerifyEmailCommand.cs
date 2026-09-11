@@ -28,9 +28,13 @@ public sealed class VerifyEmailHandler : IRequestHandler<VerifyEmailCommand, Res
             return Result.Failure(new ApplicationError("user_not_found", "User not found."));
         }
 
-        if (!user.VerifyEmail(request.Token))
+        try
         {
-            return Result.Failure(new ApplicationError("invalid_token", "The email verification token is invalid."));
+            user.ConfirmEmail(request.Token);
+        }
+        catch (SokoHub.Domain.Common.Exceptions.DomainValidationException ex)
+        {
+            return Result.Failure(new ApplicationError(ex.Code, ex.Message));
         }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);

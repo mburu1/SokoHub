@@ -2,6 +2,7 @@ using MediatR;
 using SokoHub.Contracts.Catalog;
 using SokoHub.Domain.Interfaces;
 using SokoHub.Domain.Modules.Catalog;
+using SokoHub.Domain.Common.Guards;
 using SokoHub.Domain.Common.ValueObjects;
 
 namespace SokoHub.Application.Modules.Catalog;
@@ -22,12 +23,7 @@ public sealed class CreateCategoryHandler : IRequestHandler<CreateCategoryComman
 
     public async Task<CategoryResponse> Handle(CreateCategoryCommand request, CancellationToken cancellationToken)
     {
-        var category = new Category(
-            Guid.NewGuid(),
-            Ensure.NotBlank(request.Name),
-            Slug.From(request.Name),
-            Ensure.MaxLength(request.Description, 1000),
-            request.ParentCategoryId);
+        var category = Category.Create(request.Name, request.ParentCategoryId);
 
         await _unitOfWork.Repository<Category>().AddAsync(category, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -36,7 +32,7 @@ public sealed class CreateCategoryHandler : IRequestHandler<CreateCategoryComman
             category.Id,
             category.Name,
             category.Slug.Value,
-            category.Description,
-            category.ParentCategoryId);
+            string.Empty,
+            category.ParentId);
     }
 }

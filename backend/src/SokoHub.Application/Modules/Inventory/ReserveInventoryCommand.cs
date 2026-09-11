@@ -35,7 +35,8 @@ public sealed class ReserveInventoryHandler : IRequestHandler<ReserveInventoryCo
 
         try
         {
-            var reservation = item.Reserve(_currentUser.Id, request.Quantity, DateTimeOffset.UtcNow.AddMinutes(15));
+            var userId = _currentUser.Id ?? throw new UnauthorizedAccessException("User not authenticated");
+            var reservation = item.Reserve(userId, request.Quantity, DateTimeOffset.UtcNow.AddMinutes(15));
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             return Result<Guid>.Success(reservation.Id);

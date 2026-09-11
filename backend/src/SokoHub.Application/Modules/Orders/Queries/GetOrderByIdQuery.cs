@@ -30,7 +30,7 @@ public sealed class GetOrderByIdHandler : IRequestHandler<GetOrderByIdQuery, Ord
             order.Number.Value,
             order.CustomerId,
             order.Status.ToString(),
-            order.GrandTotal.Value,
+            order.GrandTotal.Amount,
             order.Currency,
             DateTimeOffset.UtcNow); // Simplified
     }

@@ -28,7 +28,7 @@ public sealed class ReversePaymentHandler : IRequestHandler<ReversePaymentComman
 
         try
         {
-            payment.Reverse(request.Reason);
+            payment.Refund(payment.Amount, request.Reason);
         }
         catch (Exception ex)
         {

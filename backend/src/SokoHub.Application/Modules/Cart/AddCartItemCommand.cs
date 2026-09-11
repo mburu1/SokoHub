@@ -25,12 +25,13 @@ public sealed class AddCartItemHandler : IRequestHandler<AddCartItemCommand, Res
 
     public async Task<Result<DomainCart.Cart>> Handle(AddCartItemCommand request, CancellationToken cancellationToken)
     {
+        var userId = _currentUser.Id ?? throw new UnauthorizedAccessException("User not authenticated");
         var cart = await _unitOfWork.Repository<DomainCart.Cart>().SingleAsync(
-            new CartByUserIdSpecification(_currentUser.Id), cancellationToken);
+            new CartByUserIdSpecification(userId), cancellationToken);
 
         if (cart == null)
         {
-            cart = DomainCart.Cart.Create(_currentUser.Id);
+            cart = DomainCart.Cart.Create(userId);
             await _unitOfWork.Repository<DomainCart.Cart>().AddAsync(cart, cancellationToken);
         }
 

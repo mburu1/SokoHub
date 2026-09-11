@@ -2,7 +2,7 @@ namespace SokoHub.Domain.Enums;
 
 public enum ShipmentStatus
 {
-    Pending = 0,
+    Created = 0,
     LabelCreated = 1,
     PickedUp = 2,
     InTransit = 3,

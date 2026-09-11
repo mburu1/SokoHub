@@ -27,7 +27,7 @@ public sealed class GetCustomerOrdersHandler : IRequestHandler<GetCustomerOrders
             .ApplyOrderByDescending(o => o.CreatedAt)
             .ApplyPaging((request.Page - 1) * request.PageSize, request.PageSize);
 
-        var orders = await _unitOfWork.Repository<Order>().ListAsync(spec, cancellationToken);
+        var orders = (await _unitOfWork.Repository<Order>().ListAsync(spec, cancellationToken)).ToList();
         var count = await _unitOfWork.Repository<Order>().CountAsync(
             new OrdersByCustomerSpecification(request.CustomerId), cancellationToken);
 

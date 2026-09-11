@@ -37,7 +37,7 @@ public sealed class GetByIdHandler : IRequestHandler<GetByIdQuery, Result<Custom
             customer.Id,
             customer.UserId,
             customer.Email.Value,
-            customer.Phone.Value,
+            customer.Phone.E164,
             customer.Addresses.Select(a => new AddressDto(
                 a.Address.Line1,
                 a.Address.City,
@@ -60,17 +60,25 @@ public sealed class GetListHandler : IRequestHandler<GetListQuery, Result<PagedR
 
     public async Task<Result<PagedResult<CustomerResponse>>> Handle(GetListQuery request, CancellationToken cancellationToken)
     {
-        var spec = new Specification<Customer>()
-            .ApplyOrderByDescending(c => c.CreatedAt)
-            .ApplyPaging((request.Page - 1) * request.PageSize, request.PageSize);
+        var spec = new CustomersPagedSpecification((request.Page - 1) * request.PageSize, request.PageSize);
 
         var customers = await _unitOfWork.Repository<Customer>().ListAsync(spec, cancellationToken);
         var count = await _unitOfWork.Repository<Customer>().CountAsync(
-            new Specification<Customer>(), cancellationToken);
+            new CustomersPagedSpecification(0, int.MaxValue), cancellationToken);
 
         var items = customers.Select(GetByIdHandler.MapToResponse).ToList();
         var paged = new PagedResult<CustomerResponse>(items, count, request.Page, request.PageSize);
 
         return Result<PagedResult<CustomerResponse>>.Success(paged);
+    }
+}
+
+internal sealed class CustomersPagedSpecification : Specification<Customer>
+{
+    public CustomersPagedSpecification(int skip, int take)
+        : base()
+    {
+        ApplyOrderByDescending(c => c.CreatedAt);
+        ApplyPaging(skip, take);
     }
 }

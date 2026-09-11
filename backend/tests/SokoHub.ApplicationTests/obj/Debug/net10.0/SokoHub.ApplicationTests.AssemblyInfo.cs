@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("SokoHub.ApplicationTests")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+246e5010e8705c7fcd75421ae6b6bbde6c2d1460")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+61b9b6d2ef2750152c86d05dcac22d238c720016")]
 [assembly: System.Reflection.AssemblyProductAttribute("SokoHub.ApplicationTests")]
 [assembly: System.Reflection.AssemblyTitleAttribute("SokoHub.ApplicationTests")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

@@ -32,7 +32,8 @@ public sealed class PlaceOrderHandler : IRequestHandler<PlaceOrderCommand, Resul
 
     public async Task<Result<OrderResponse>> Handle(PlaceOrderCommand request, CancellationToken cancellationToken)
     {
-        if (request.CustomerId != _currentUser.Id)
+        var userId = _currentUser.Id ?? throw new UnauthorizedAccessException("User not authenticated");
+        if (request.CustomerId != userId)
         {
             return Result<OrderResponse>.Failure(new ApplicationError("unauthorized", "You can only place orders for yourself."));
         }
@@ -51,7 +52,7 @@ public sealed class PlaceOrderHandler : IRequestHandler<PlaceOrderCommand, Resul
 
             try
             {
-                var res = inventoryItem.Reserve(_currentUser.Id, line.Quantity, DateTimeOffset.UtcNow.AddMinutes(30));
+                var res = inventoryItem.Reserve(userId, line.Quantity, DateTimeOffset.UtcNow.AddMinutes(30));
                 reservations.Add(res.Id);
             }
             catch (Exception ex)
@@ -79,7 +80,7 @@ public sealed class PlaceOrderHandler : IRequestHandler<PlaceOrderCommand, Resul
             order.Number.Value,
             order.CustomerId,
             order.Status.ToString(),
-            order.GrandTotal.Value,
+            order.GrandTotal.Amount,
             order.Currency,
             DateTimeOffset.UtcNow));
     }

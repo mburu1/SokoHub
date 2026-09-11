@@ -23,7 +23,7 @@ public sealed class RegisterVendorHandler : IRequestHandler<RegisterVendorComman
 
     public async Task<VendorResponse> Handle(RegisterVendorCommand request, CancellationToken cancellationToken)
     {
-        var taxId = KraPin.Create(request.TaxId);
+        var taxId = SokoHub.Domain.Common.ValueObjects.KraPin.Create(request.TaxId);
         var commission = Percentage.Create(request.CommissionRate);
 
         var vendor = Vendor.Register(request.UserId, request.BusinessName, taxId, commission);

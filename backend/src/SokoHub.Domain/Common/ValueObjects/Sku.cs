@@ -16,6 +16,10 @@ public sealed partial record Sku
         return new Sku(normalized);
     }
 
+    public static Sku Create(string value) => Parse(value);
+
+    public static Sku From(string value) => Parse(value);
+
     public override string ToString() => Value;
 
     public static implicit operator string(Sku sku) => sku.Value;

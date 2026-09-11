@@ -35,7 +35,7 @@ public sealed class GetCurrentUserHandler : IRequestHandler<GetCurrentUserQuery,
         var userDto = new UserDto(
             user.Id,
             user.Email.Value,
-            user.Phone.Value,
+            user.Phone.E164,
             user.DisplayName,
             roleNames,
             user.Status == UserStatus.Active,

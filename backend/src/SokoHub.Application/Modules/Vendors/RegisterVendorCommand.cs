@@ -35,7 +35,7 @@ public sealed class RegisterVendorHandler : IRequestHandler<RegisterVendorComman
 
         try
         {
-            var taxId = KraPin.Create(request.TaxId);
+            var taxId = SokoHub.Domain.Common.ValueObjects.KraPin.Create(request.TaxId);
             var commissionRate = Percentage.Create(request.CommissionRate);
 
             var vendor = Vendor.Register(

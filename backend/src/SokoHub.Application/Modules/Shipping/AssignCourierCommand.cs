@@ -35,7 +35,7 @@ public sealed class AssignCourierHandler : IRequestHandler<AssignCourierCommand,
             return Result.Failure(new ApplicationError("courier_not_found", "Courier not found."));
         }
 
-        shipment.AssignCourier(courier);
+        shipment.AssignCourier(courier.Id);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 

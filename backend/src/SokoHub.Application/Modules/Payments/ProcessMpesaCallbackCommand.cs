@@ -26,14 +26,14 @@ public sealed class ProcessMpesaCallbackHandler : IRequestHandler<ProcessMpesaCa
     {
         var callback = request.Callback;
         var cacheKey = $"mpesa:checkout:{callback.CheckoutRequestId}";
-        var paymentId = await _cacheService.GetAsync<Guid>(cacheKey, cancellationToken);
+        var paymentId = await _cacheService.GetAsync<Guid?>(cacheKey, cancellationToken);
 
-        if (paymentId is null)
+        if (!paymentId.HasValue)
         {
             return Result.Failure(new ApplicationError("payment_not_found", "Payment not found for the given CheckoutRequestId."));
         }
 
-        var payment = await _unitOfWork.Repository<Payment>().GetByIdAsync(paymentId, cancellationToken);
+        var payment = await _unitOfWork.Repository<Payment>().GetByIdAsync(paymentId.Value, cancellationToken);
         if (payment == null)
         {
             return Result.Failure(new ApplicationError("payment_not_found", "Payment not found for the given CheckoutRequestId."));
@@ -43,13 +43,13 @@ public sealed class ProcessMpesaCallbackHandler : IRequestHandler<ProcessMpesaCa
         {
             var paidAmount = callback.Amount.HasValue
                 ? Money.Create(callback.Amount.Value, payment.Amount.Currency)
-                : null;
+                : (Money?)null;
 
             payment.MarkAsSucceeded(callback.MpesaReceiptNumber ?? callback.CheckoutRequestId, paidAmount);
         }
         else
         {
-            payment.MarkAsFailed(callback.ResultDesc);
+            payment.MarkAsFailed(callback.ResultDescription);
         }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);

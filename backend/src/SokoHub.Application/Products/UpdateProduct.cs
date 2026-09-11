@@ -37,7 +37,7 @@ public sealed class UpdateProductHandler : IRequestHandler<UpdateProductCommand,
         var variants = product.Variants.Select(v => new ProductVariantResponse(
             v.Id,
             v.Sku.Value,
-            v.Price.Amount,
+            v.Price.ListPrice.Amount,
             v.WeightGrams,
             v.IsActive)).ToList();
 

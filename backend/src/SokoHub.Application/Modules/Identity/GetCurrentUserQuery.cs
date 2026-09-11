@@ -22,7 +22,8 @@ public sealed class GetCurrentUserHandler : IRequestHandler<GetCurrentUserQuery,
 
     public async Task<Result<User>> Handle(GetCurrentUserQuery request, CancellationToken cancellationToken)
     {
-        var user = await _unitOfWork.Repository<User>().GetByIdAsync(_currentUser.Id, cancellationToken);
+        var userId = _currentUser.Id ?? throw new UnauthorizedAccessException("User not authenticated");
+        var user = await _unitOfWork.Repository<User>().GetByIdAsync(userId, cancellationToken);
 
         if (user == null)
         {

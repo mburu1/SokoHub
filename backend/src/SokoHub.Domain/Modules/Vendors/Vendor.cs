@@ -72,4 +72,24 @@ public sealed class Vendor : AggregateRoot
         _settlements.Add(settlement);
         Touch();
     }
+
+    public void Suspend(string reason)
+    {
+        Ensure.NotBlank(reason);
+        Status = VendorStatus.Suspended;
+        Touch();
+    }
+
+    public void Reject(string reason)
+    {
+        Ensure.NotBlank(reason);
+        Status = VendorStatus.Rejected;
+        Touch();
+    }
+
+    public void AddDocument(VendorDocument document)
+    {
+        _documents.Add(document);
+        Touch();
+    }
 }
