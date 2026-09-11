@@ -12,10 +12,3 @@ public record ApiResponse<T>(
     public static ApiResponse<T> Fail(string message, IReadOnlyList<string>? errors = null) =>
         new(false, message, default, errors);
 }
-
-public record PagedResult<T>(
-    IReadOnlyList<T> Items,
-    int PageNumber,
-    int PageSize,
-    long TotalCount,
-    int TotalPages);

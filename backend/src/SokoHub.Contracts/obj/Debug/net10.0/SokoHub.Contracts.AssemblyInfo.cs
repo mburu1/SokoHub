@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("SokoHub.Contracts")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+039e7d571eb2c327a5905badc8bf2fd7c31b0eea")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+246e5010e8705c7fcd75421ae6b6bbde6c2d1460")]
 [assembly: System.Reflection.AssemblyProductAttribute("SokoHub.Contracts")]
 [assembly: System.Reflection.AssemblyTitleAttribute("SokoHub.Contracts")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

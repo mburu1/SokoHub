@@ -1,3 +1,5 @@
+using SokoHub.Domain.Modules.Identity;
+
 namespace SokoHub.Application.Common.Interfaces;
 
 public interface IJwtProvider

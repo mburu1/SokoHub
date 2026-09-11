@@ -3,6 +3,7 @@ using SokoHub.Application.Common.Errors;
 using SokoHub.Application.Common.Interfaces;
 using SokoHub.Application.Common.Results;
 using SokoHub.Contracts.Auth;
+using SokoHub.Domain.Common.Specifications;
 using SokoHub.Domain.Interfaces;
 using SokoHub.Domain.Modules.Identity;
 

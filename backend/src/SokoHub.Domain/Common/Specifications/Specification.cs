@@ -5,7 +5,13 @@ namespace SokoHub.Domain.Common.Specifications;
 
 public abstract class Specification<T> : ISpecification<T>
 {
-    public abstract Expression<Func<T, bool>> Criteria { get; }
+    private Expression<Func<T, bool>>? _criteria;
+
+    public virtual Expression<Func<T, bool>> Criteria
+    {
+        get => _criteria ?? throw new InvalidOperationException("Criteria must be set in derived class or via constructor.");
+        protected set => _criteria = value;
+    }
 
     public List<Expression<Func<T, object>>> Includes { get; } = [];
 
@@ -27,10 +33,6 @@ public abstract class Specification<T> : ISpecification<T>
     {
         _criteria = criteria;
     }
-
-    private Expression<Func<T, bool>>? _criteria;
-
-    public override Expression<Func<T, bool>> Criteria => _criteria ?? throw new InvalidOperationException("Criteria must be set in derived class or via constructor.");
 
     public Specification<T> AddInclude(Expression<Func<T, object>> include)
     {
