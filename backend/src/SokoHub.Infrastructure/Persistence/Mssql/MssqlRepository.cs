@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
-using SokoHub.Domain.Interfaces;
 using SokoHub.Domain.Common.Specifications;
+using SokoHub.Domain.Interfaces;
 
 namespace SokoHub.Infrastructure.Persistence.Mssql;
 
@@ -18,9 +18,22 @@ public class MssqlRepository<TEntity> : IRepository<TEntity>, IReadRepository<TE
 
     public virtual async Task<TEntity?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        // This assumes entities have an 'Id' property via a base class or interface
-        // For simplicity in a generic repo, we use EF's FindAsync
         return await _dbSet.FindAsync(new object[] { id }, cancellationToken);
+    }
+
+    public virtual async Task<TEntity?> FirstOrDefaultAsync(ISpecification<TEntity> spec, CancellationToken cancellationToken = default)
+    {
+        return await spec.ApplySpecification(_dbSet).FirstOrDefaultAsync(cancellationToken);
+    }
+
+    public virtual async Task<TEntity?> SingleAsync(ISpecification<TEntity> spec, CancellationToken cancellationToken = default)
+    {
+        return await spec.ApplySpecification(_dbSet).FirstOrDefaultAsync(cancellationToken);
+    }
+
+    public virtual async Task<TEntity?> SingleAsync(CancellationToken cancellationToken = default)
+    {
+        return await _dbSet.FirstOrDefaultAsync(cancellationToken);
     }
 
     public virtual async Task<IReadOnlyList<TEntity>> ListAsync(ISpecification<TEntity> spec, CancellationToken cancellationToken = default)
@@ -28,9 +41,30 @@ public class MssqlRepository<TEntity> : IRepository<TEntity>, IReadRepository<TE
         return await spec.ApplySpecification(_dbSet).ToListAsync(cancellationToken);
     }
 
-    public virtual async Task<TEntity?> SingleAsync(ISpecification<TEntity> spec, CancellationToken cancellationToken = default)
+    public virtual async Task<IReadOnlyList<TEntity>> ListAsync(CancellationToken cancellationToken = default)
     {
-        return await spec.ApplySpecification(_dbSet).FirstOrDefaultAsync(cancellationToken);
+        return await _dbSet.ToListAsync(cancellationToken);
+    }
+
+    public virtual async Task<int> CountAsync(ISpecification<TEntity> spec, CancellationToken cancellationToken = default)
+    {
+        return await spec.ApplySpecification(_dbSet).CountAsync(cancellationToken);
+    }
+
+    public virtual async Task<bool> AnyAsync(ISpecification<TEntity> spec, CancellationToken cancellationToken = default)
+    {
+        return await spec.ApplySpecification(_dbSet).AnyAsync(cancellationToken);
+    }
+
+    public virtual async Task<bool> ExistsAsync(ISpecification<TEntity> spec, CancellationToken cancellationToken = default)
+    {
+        return await spec.ApplySpecification(_dbSet).AnyAsync(cancellationToken);
+    }
+
+    public virtual async Task<TEntity?> GetByReferenceAsync(string reference, CancellationToken cancellationToken = default)
+    {
+        var id = Guid.TryParse(reference, out var parsed) ? parsed : default;
+        return id == Guid.Empty ? null : await _dbSet.FindAsync(new object[] { id }, cancellationToken);
     }
 
     public virtual async Task AddAsync(TEntity entity, CancellationToken cancellationToken = default)
@@ -46,10 +80,5 @@ public class MssqlRepository<TEntity> : IRepository<TEntity>, IReadRepository<TE
     public virtual void Delete(TEntity entity)
     {
         _dbSet.Remove(entity);
-    }
-
-    public virtual async Task<int> CountAsync(ISpecification<TEntity> spec, CancellationToken cancellationToken = default)
-    {
-        return await spec.ApplySpecification(_dbSet).CountAsync(cancellationToken);
     }
 }

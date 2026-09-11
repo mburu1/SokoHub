@@ -1,14 +1,15 @@
 using MediatR;
-using SokoHub.Domain.Modules.Orders;
-using SokoHub.Domain.Interfaces;
-using SokoHub.Application.Common.Results;
 using SokoHub.Application.Common.Errors;
+using SokoHub.Application.Common.Results;
+using SokoHub.Domain.Common.Specifications;
+using SokoHub.Domain.Interfaces;
+using SokoHub.Domain.Modules.Orders;
 
 namespace SokoHub.Application.Modules.Orders;
 
-public record PackOrderCommand(Guid OrderId) : IRequest<Result>;
+public record PackOrderCommand(Guid VendorOrderId, string Note = "") : IRequest<Result<bool>>;
 
-public sealed class PackOrderHandler : IRequestHandler<PackOrderCommand, Result>
+public sealed class PackOrderHandler : IRequestHandler<PackOrderCommand, Result<bool>>
 {
     private readonly IUnitOfWork _unitOfWork;
 
@@ -17,26 +18,24 @@ public sealed class PackOrderHandler : IRequestHandler<PackOrderCommand, Result>
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<Result> Handle(PackOrderCommand request, CancellationToken cancellationToken)
+    public async Task<Result<bool>> Handle(PackOrderCommand request, CancellationToken cancellationToken)
     {
-        var order = await _unitOfWork.Repository<Order>().GetByIdAsync(request.OrderId, cancellationToken);
-
-        if (order == null)
+        var vendorOrder = await _unitOfWork.Repository<VendorOrder>().GetByIdAsync(request.VendorOrderId, cancellationToken);
+        if (vendorOrder is null)
         {
-            return Result.Failure(new ApplicationError("order_not_found", "Order not found."));
+            return Result<bool>.Failure(new ApplicationError("vendor_order_not_found", $"Vendor order {request.VendorOrderId} was not found."));
         }
 
         try
         {
-            order.Pack();
+            vendorOrder.Pack();
         }
-        catch (Exception ex)
+        catch (SokoHub.Domain.Common.Exceptions.DomainValidationException ex)
         {
-            return Result.Failure(new ApplicationError("pack_failed", ex.Message));
+            return Result<bool>.Failure(new ApplicationError(ex.Code, ex.Message));
         }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-        return Result.Success();
+        return Result<bool>.Success(true);
     }
 }

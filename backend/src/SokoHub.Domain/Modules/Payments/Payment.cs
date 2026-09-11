@@ -127,6 +127,41 @@ public sealed class Payment : AggregateRoot
         });
     }
 
+    public void MarkAsSucceeded(string mpesaReceiptNumber, Money? paidAmount = null)
+    {
+        Ensure.That(Status is PaymentStatus.Pending or PaymentStatus.Initiated, "payment_not_initiated", "Payment cannot succeed in its current state.");
+        if (paidAmount is { } actual)
+        {
+            Ensure.That(actual.Currency == Amount.Currency, "currency_mismatch", "Paid amount currency must match payment currency.");
+            Ensure.That(actual.Amount == Amount.Amount, "payment_amount_mismatch", "Paid amount does not match the payment.");
+        }
+
+        Status = PaymentStatus.Succeeded;
+        IncrementVersion();
+        Raise(new PaymentSucceededEvent
+        {
+            AggregateId = Id,
+            OrderId = OrderId,
+            Amount = Amount,
+            Reference = mpesaReceiptNumber ?? Reference.Value
+        });
+    }
+
+    public void MarkAsFailed(string reason)
+    {
+        Ensure.That(Status is PaymentStatus.Pending or PaymentStatus.Initiated, "payment_not_initiated", "Payment cannot fail in its current state.");
+        Ensure.NotBlank(reason);
+        Status = PaymentStatus.Failed;
+        IncrementVersion();
+        Raise(new PaymentFailedEvent
+        {
+            AggregateId = Id,
+            OrderId = OrderId,
+            Reason = reason,
+            ResultCode = null
+        });
+    }
+
     public PaymentRefund Refund(Money amount, string reason)
     {
         Ensure.That(Status is PaymentStatus.Succeeded or PaymentStatus.PartiallyRefunded, "payment_not_refundable", "Only successful payments can be refunded.");
@@ -151,6 +186,12 @@ public sealed class Payment : AggregateRoot
         Ensure.That(Status is PaymentStatus.Pending or PaymentStatus.Initiated, "payment_not_cancellable", "Payment cannot be cancelled.");
         Ensure.NotBlank(reason);
         Status = PaymentStatus.Cancelled;
+        IncrementVersion();
+    }
+
+    public void UpdateStatus(PaymentStatus status)
+    {
+        Status = status;
         IncrementVersion();
     }
 }

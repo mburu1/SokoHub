@@ -128,6 +128,16 @@ public sealed class Order : AggregateRoot
         });
     }
 
+    public void ConfirmPayment(PaymentReference paymentReference)
+    {
+        if (Status is not OrderStatus.PendingPayment)
+        {
+            return;
+        }
+
+        Confirm();
+    }
+
     public void MarkVendorShipped(Guid vendorOrderId, TrackingNumber trackingNumber)
     {
         var vendorOrder = RequireVendorOrder(vendorOrderId);

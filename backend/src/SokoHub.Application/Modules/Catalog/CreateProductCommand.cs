@@ -1,11 +1,11 @@
 using MediatR;
+using SokoHub.Application.Common.Errors;
+using SokoHub.Application.Common.Interfaces;
+using SokoHub.Application.Common.Results;
 using SokoHub.Contracts.Catalog;
 using SokoHub.Domain.Interfaces;
 using SokoHub.Domain.Modules.Catalog;
-using SokoHub.Domain.Common.ValueObjects;
-using SokoHub.Application.Common.Interfaces;
-using SokoHub.Application.Common.Results;
-using SokoHub.Application.Common.Errors;
+using SokoHub.Domain.Modules.Vendors;
 
 namespace SokoHub.Application.Modules.Catalog;
 
@@ -52,11 +52,12 @@ public sealed class CreateProductHandler : IRequestHandler<CreateProductCommand,
 
         return Result<ProductResponse>.Success(new ProductResponse(
             product.Id,
+            product.VendorId,
+            product.CategoryId,
+            product.BrandId,
             product.Name,
             product.Slug.Value,
             product.Description,
-            product.Status.ToString(),
-            product.VendorId,
-            product.CategoryId));
+            product.Status.ToString()));
     }
 }

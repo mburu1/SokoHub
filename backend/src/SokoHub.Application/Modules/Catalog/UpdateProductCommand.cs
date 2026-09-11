@@ -1,10 +1,11 @@
 using MediatR;
-using SokoHub.Contracts.Catalog;
-using SokoHub.Domain.Modules.Catalog;
-using SokoHub.Domain.Interfaces;
-using SokoHub.Application.Common.Results;
 using SokoHub.Application.Common.Errors;
 using SokoHub.Application.Common.Interfaces;
+using SokoHub.Application.Common.Results;
+using SokoHub.Contracts.Catalog;
+using SokoHub.Domain.Interfaces;
+using SokoHub.Domain.Modules.Catalog;
+using SokoHub.Domain.Modules.Vendors;
 
 namespace SokoHub.Application.Modules.Catalog;
 
@@ -41,19 +42,19 @@ public sealed class UpdateProductHandler : IRequestHandler<UpdateProductCommand,
             return Result<ProductResponse>.Failure(new ApplicationError("unauthorized", "You are not authorized to update this product."));
         }
 
+        product.UpdateDetails(request.Name, request.Description, request.BrandId);
         product.Recategorize(request.CategoryId);
-        // Assuming Product has an Update method or we modify properties if they have internal setters
-        // For now, we use the domain model's constraints.
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return Result<ProductResponse>.Success(new ProductResponse(
             product.Id,
+            product.VendorId,
+            product.CategoryId,
+            product.BrandId,
             product.Name,
             product.Slug.Value,
             product.Description,
-            product.Status.ToString(),
-            product.VendorId,
-            product.CategoryId));
+            product.Status.ToString()));
     }
 }

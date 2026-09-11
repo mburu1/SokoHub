@@ -29,11 +29,12 @@ public sealed class GetByIdHandler : IRequestHandler<GetByIdQuery, Result<Produc
 
         return Result<ProductResponse>.Success(new ProductResponse(
             product.Id,
+            product.VendorId,
+            product.CategoryId,
+            product.BrandId,
             product.Name,
             product.Slug.Value,
             product.Description,
-            product.Status.ToString(),
-            product.VendorId,
-            product.CategoryId));
+            product.Status.ToString()));
     }
 }

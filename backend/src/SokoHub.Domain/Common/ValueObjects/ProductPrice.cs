@@ -33,6 +33,9 @@ public sealed record ProductPrice
         SaleEndsAt = saleEndsAt;
     }
 
+    public static ProductPrice Create(decimal amount, string currency = Money.DefaultCurrency) =>
+        new(new Money(amount, currency));
+
     public Money EffectivePrice(DateTimeOffset at)
     {
         if (SalePrice is null)
@@ -44,6 +47,6 @@ public sealed record ProductPrice
             (SaleStartsAt is null || at >= SaleStartsAt)
             && (SaleEndsAt is null || at <= SaleEndsAt);
 
-        return inWindow ? SalePrice! : ListPrice;
+        return inWindow ? SalePrice.Value : ListPrice;
     }
 }

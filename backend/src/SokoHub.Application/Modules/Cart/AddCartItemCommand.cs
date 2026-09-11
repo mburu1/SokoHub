@@ -1,19 +1,18 @@
 using MediatR;
-using SokoHub.Application.Common.Results;
 using SokoHub.Application.Common.Errors;
-using SokoHub.Domain.Modules.Cart;
-using SokoHub.Domain.Modules.Catalog;
-using SokoHub.Domain.Interfaces;
 using SokoHub.Application.Common.Interfaces;
-using SokoHub.Domain.Common.ValueObjects;
+using SokoHub.Application.Common.Results;
+using SokoHub.Domain.Interfaces;
+using DomainCart = SokoHub.Domain.Modules.Cart;
+using SokoHub.Domain.Modules.Catalog;
 
 namespace SokoHub.Application.Modules.Cart;
 
 public record AddCartItemCommand(
     Guid ProductVariantId,
-    int Quantity) : IRequest<Result<Cart>>;
+    int Quantity) : IRequest<Result<DomainCart.Cart>>;
 
-public sealed class AddCartItemHandler : IRequestHandler<AddCartItemCommand, Result<Cart>>
+public sealed class AddCartItemHandler : IRequestHandler<AddCartItemCommand, Result<DomainCart.Cart>>
 {
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUser _currentUser;
@@ -24,25 +23,41 @@ public sealed class AddCartItemHandler : IRequestHandler<AddCartItemCommand, Res
         _currentUser = currentUser;
     }
 
-    public async Task<Result<Cart>> Handle(AddCartItemCommand request, CancellationToken cancellationToken)
+    public async Task<Result<DomainCart.Cart>> Handle(AddCartItemCommand request, CancellationToken cancellationToken)
     {
-        var cart = await _unitOfWork.Repository<Cart>().GetByUserIdAsync(_currentUser.Id, cancellationToken);
+        var cart = await _unitOfWork.Repository<DomainCart.Cart>().SingleAsync(
+            new CartByUserIdSpecification(_currentUser.Id), cancellationToken);
+
         if (cart == null)
         {
-            cart = Cart.Create(_currentUser.Id);
-            await _unitOfWork.Repository<Cart>().AddAsync(cart, cancellationToken);
+            cart = DomainCart.Cart.Create(_currentUser.Id);
+            await _unitOfWork.Repository<DomainCart.Cart>().AddAsync(cart, cancellationToken);
         }
 
         var variant = await _unitOfWork.Repository<ProductVariant>().GetByIdAsync(request.ProductVariantId, cancellationToken);
         if (variant == null)
         {
-            return Result<Cart>.Failure(new ApplicationError("variant_not_found", "Product variant not found."));
+            return Result<DomainCart.Cart>.Failure(new ApplicationError("variant_not_found", "Product variant not found."));
         }
 
-        cart.AddItem(variant.Id, request.Quantity);
+        var product = await _unitOfWork.Repository<Product>().GetByIdAsync(variant.ProductId, cancellationToken);
+        if (product == null)
+        {
+            return Result<DomainCart.Cart>.Failure(new ApplicationError("product_not_found", "Product not found."));
+        }
+
+        var unitPrice = variant.Price.EffectivePrice(DateTimeOffset.UtcNow);
+        cart.AddItem(
+            product.VendorId,
+            product.Id,
+            variant.Id,
+            variant.Sku,
+            product.Name,
+            unitPrice,
+            request.Quantity);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return Result<Cart>.Success(cart);
+        return Result<DomainCart.Cart>.Success(cart);
     }
 }

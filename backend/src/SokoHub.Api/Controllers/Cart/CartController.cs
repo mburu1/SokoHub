@@ -1,12 +1,13 @@
-using Microsoft.AspNetCore.Mvc;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using SokoHub.Application.Modules.Cart;
-using SokoHub.Application.Modules.Cart.Queries;
 
 namespace SokoHub.Api.Controllers.Cart;
 
 [ApiController]
 [Route("api/cart")]
+[Authorize]
 public class CartController : ControllerBase
 {
     private readonly ISender _sender;
@@ -20,34 +21,34 @@ public class CartController : ControllerBase
     public async Task<IActionResult> GetCart()
     {
         var result = await _sender.Send(new GetCartQuery());
-        return Ok(result);
+        return result.IsSuccess ? Ok(result.Value) : BadRequest(result.Error);
     }
 
     [HttpPost("items")]
     public async Task<IActionResult> AddItem([FromBody] AddCartItemCommand command)
     {
         var result = await _sender.Send(command);
-        return Ok(result);
+        return result.IsSuccess ? Ok(result.Value) : BadRequest(result.Error);
     }
 
-    [HttpDelete("items/{productId:guid}")]
-    public async Task<IActionResult> RemoveItem(Guid productId)
+    [HttpDelete("items/{productVariantId:guid}")]
+    public async Task<IActionResult> RemoveItem(Guid productVariantId)
     {
-        await _sender.Send(new RemoveCartItemCommand(productId));
-        return NoContent();
+        var result = await _sender.Send(new RemoveCartItemCommand(productVariantId));
+        return result.IsSuccess ? Ok(result.Value) : BadRequest(result.Error);
     }
 
     [HttpPut("items")]
     public async Task<IActionResult> UpdateItem([FromBody] UpdateCartItemCommand command)
     {
         var result = await _sender.Send(command);
-        return Ok(result);
+        return result.IsSuccess ? Ok(result.Value) : BadRequest(result.Error);
     }
 
     [HttpDelete("clear")]
     public async Task<IActionResult> Clear()
     {
-        await _sender.Send(new ClearCartCommand());
-        return NoContent();
+        var result = await _sender.Send(new ClearCartCommand());
+        return result.IsSuccess ? Ok(result.Value) : BadRequest(result.Error);
     }
 }

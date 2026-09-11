@@ -7,9 +7,15 @@ public interface IReadRepository<T>
 
     Task<T?> FirstOrDefaultAsync(ISpecification<T> specification, CancellationToken cancellationToken = default);
 
+    Task<T?> SingleAsync(ISpecification<T> specification, CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<T>> ListAsync(ISpecification<T> specification, CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<T>> ListAsync(CancellationToken cancellationToken = default);
+
     Task<int> CountAsync(ISpecification<T> specification, CancellationToken cancellationToken = default);
+
+    Task<bool> AnyAsync(ISpecification<T> specification, CancellationToken cancellationToken = default);
 
     Task<bool> ExistsAsync(ISpecification<T> specification, CancellationToken cancellationToken = default);
 }

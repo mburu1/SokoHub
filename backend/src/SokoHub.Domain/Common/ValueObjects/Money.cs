@@ -16,6 +16,8 @@ public readonly record struct Money : IComparable<Money>
         Currency = NormalizeCurrency(currency);
     }
 
+    public static Money Create(decimal amount, string currency = DefaultCurrency) => new(amount, currency);
+
     public static Money Zero(string currency = DefaultCurrency) => new(0, currency);
 
     public static Money Kes(decimal amount) => new(amount, DefaultCurrency);

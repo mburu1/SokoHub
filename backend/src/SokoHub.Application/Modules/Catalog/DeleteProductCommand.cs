@@ -1,9 +1,10 @@
 using MediatR;
-using SokoHub.Domain.Modules.Catalog;
-using SokoHub.Domain.Interfaces;
-using SokoHub.Application.Common.Results;
 using SokoHub.Application.Common.Errors;
 using SokoHub.Application.Common.Interfaces;
+using SokoHub.Application.Common.Results;
+using SokoHub.Domain.Interfaces;
+using SokoHub.Domain.Modules.Catalog;
+using SokoHub.Domain.Modules.Vendors;
 
 namespace SokoHub.Application.Modules.Catalog;
 
@@ -35,7 +36,7 @@ public sealed class DeleteProductHandler : IRequestHandler<DeleteProductCommand,
             return Result.Failure(new ApplicationError("unauthorized", "You are not authorized to delete this product."));
         }
 
-        await _unitOfWork.Repository<Product>().DeleteAsync(product, cancellationToken);
+        _unitOfWork.Repository<Product>().Delete(product);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return Result.Success();

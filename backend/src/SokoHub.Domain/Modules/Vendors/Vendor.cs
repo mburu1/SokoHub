@@ -54,45 +54,8 @@ public sealed class Vendor : AggregateRoot
     }
 
     public void VerifyKyc(Guid documentId, string verifiedBy)
-
     {
-        Ensure.That(Status == VendorStatus.Pending || Status == VendorStatus.UnderReview, "vendor_not_verifiable", "Vendor is not in a verifiable state.");
-
-        // Logic to mark as verified would typically happen here or via a separate service
-        // For the entity, we update status.
-        Status = VendorStatus.Active;
-        Touch();
-    }
-
-    public void Suspend(string reason)
-    {
-        Ensure.NotBlank(reason);
-        Status = VendorStatus.Suspended;
-        Touch();
-    }
-
-    public void Reactivate()
-    {
-        Ensure.That(Status == VendorStatus.Suspended, "vendor_not_suspended", "Only suspended vendors can be reactivated.");
-        Status = VendorStatus.Active;
-        Touch();
-    }
-
-    public void Reject(string reason)
-    {
-        Ensure.NotBlank(reason);
-        Status = VendorStatus.Rejected;
-        Touch();
-    }
-
-    public void UpdateCommission(Percentage newRate)
-    {
-        CommissionRate = newRate;
-        Touch();
-    }
-
-    public void AddDocument(VendorDocument document)
-    {
+        var document = SokoHub.Domain.Modules.Vendors.VendorDocument.Create(this.Id, documentId, verifiedBy);
         _documents.Add(document);
         SetUnderReview();
         Touch();

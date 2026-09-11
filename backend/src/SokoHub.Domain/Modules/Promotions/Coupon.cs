@@ -47,6 +47,6 @@ public class Coupon
 
     public Money CalculateDiscount(Money amount)
     {
-        return CalculateDiscount(amount.Value);
+        return CalculateDiscount(amount.Amount);
     }
 }

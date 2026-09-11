@@ -1,9 +1,8 @@
 using MediatR;
 using SokoHub.Application.Common.Results;
-using SokoHub.Application.Common.Errors;
-using SokoHub.Domain.Modules.Cart;
+using SokoHub.Domain.Common.Specifications;
 using SokoHub.Domain.Interfaces;
-using SokoHub.Application.Common.Interfaces;
+using DomainCart = SokoHub.Domain.Modules.Cart;
 
 namespace SokoHub.Application.Modules.Cart;
 
@@ -22,14 +21,15 @@ public sealed class ClearCartHandler : IRequestHandler<ClearCartCommand, Result>
 
     public async Task<Result> Handle(ClearCartCommand request, CancellationToken cancellationToken)
     {
-        var cart = await _unitOfWork.Repository<Cart>().GetByUserIdAsync(_currentUser.Id, cancellationToken);
+        var cart = await _unitOfWork.Repository<DomainCart.Cart>().SingleAsync(
+            new CartByUserIdSpecification(_currentUser.Id), cancellationToken);
+
         if (cart == null)
         {
             return Result.Success();
         }
 
         cart.Clear();
-
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return Result.Success();

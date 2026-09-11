@@ -21,7 +21,7 @@ public sealed class Customer : AggregateRoot
         Touch();
     }
 
-    public Guid UserId { get; private set; } = null!;
+    public Guid UserId { get; private set; }
     public EmailAddress Email { get; private set; } = null!;
     public PhoneNumber Phone { get; private set; } = null!;
 

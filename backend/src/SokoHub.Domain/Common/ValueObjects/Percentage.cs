@@ -11,6 +11,8 @@ public readonly record struct Percentage
         Value = Ensure.InRange(value, 0m, 100m);
     }
 
+    public static Percentage Create(decimal value) => new(value);
+
     public decimal Fraction => Value / 100m;
 
     public static Percentage Zero => new(0);

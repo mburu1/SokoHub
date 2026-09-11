@@ -35,6 +35,7 @@ public sealed class RegisterUserHandler : IRequestHandler<RegisterUserCommand, R
         var passwordHash = _passwordHasher.HashPassword(request.Password);
 
         var user = User.Register(email, phone, request.DisplayName, passwordHash);
+        user.SetEmailVerificationToken(_passwordHasher.HashPassword(Guid.NewGuid().ToString("N")));
 
         await _unitOfWork.Repository<User>().AddAsync(user, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);

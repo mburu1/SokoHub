@@ -1,9 +1,10 @@
 using MediatR;
-using SokoHub.Domain.Interfaces;
-using SokoHub.Domain.Modules.Catalog;
+using SokoHub.Application.Common.Errors;
 using SokoHub.Application.Common.Interfaces;
 using SokoHub.Application.Common.Results;
-using SokoHub.Application.Common.Errors;
+using SokoHub.Domain.Interfaces;
+using SokoHub.Domain.Modules.Catalog;
+using SokoHub.Domain.Modules.Vendors;
 
 namespace SokoHub.Application.Modules.Catalog;
 

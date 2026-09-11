@@ -22,6 +22,11 @@ public sealed record OrderNumber
         return new OrderNumber($"SH-{stamp}-{sequence:D6}");
     }
 
+    public static OrderNumber Next() =>
+        Next(DateTimeOffset.UtcNow, (int)(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() % 1_000_000) + 1);
+
+    public static OrderNumber Generate() => Next();
+
     public override string ToString() => Value;
 
     public static implicit operator string(OrderNumber number) => number.Value;

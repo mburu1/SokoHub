@@ -1,64 +1,55 @@
-using RabbitMQ.Client;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using SokoHub.Domain.Common.DomainEvents;
+using RabbitMQ.Client;
+using SokoHub.Application.Common.Interfaces;
+using SokoHub.Contracts.IntegrationEvents;
 
 namespace SokoHub.Infrastructure.Messaging.RabbitMq;
 
-public class RabbitMqBus : IDomainEventBus
+public class RabbitMqBus : IEventBus, IDisposable
 {
     private readonly IConnection _connection;
     private readonly IModel _channel;
     private readonly ILogger<RabbitMqBus> _logger;
+    private readonly string _exchange;
 
-    public RabbitMqBus(IConnection connection, IModel channel, ILogger<RabbitMqBus> logger)
+    public RabbitMqBus(IConnection connection, IConfiguration config, ILogger<RabbitMqBus> logger)
     {
         _connection = connection;
-        _channel = channel;
         _logger = logger;
+        _channel = _connection.CreateModel();
+        _exchange = config["RabbitMQ:Exchange"] ?? "sokohub.events";
+
+        _channel.ExchangeDeclare(exchange: _exchange, type: ExchangeType.Topic, durable: true, autoDelete: false);
     }
 
-    public async Task PublishAsync<TEvent>(TEvent @event, CancellationToken cancellationToken = default) where TEvent : IDomainEvent
+    public Task PublishAsync<TEvent>(TEvent @event, CancellationToken cancellationToken = default)
+        where TEvent : IntegrationEvent
     {
-        var eventName = typeof(TEvent).Name;
-        _channel.ExchangeDeclare(exchange: eventName, type: ExchangeType.Fanout);
-
+        var routingKey = @event.GetType().Name;
         var body = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(@event));
 
+        var properties = _channel.CreateBasicProperties();
+        properties.Persistent = true;
+        properties.ContentType = "application/json";
+
         _channel.BasicPublish(
-            exchange: eventName,
-            routingKey: string.Empty,
-            basicProperties: null,
+            exchange: _exchange,
+            routingKey: routingKey,
+            mandatory: true,
+            basicProperties: properties,
             body: body);
 
-        await Task.CompletedTask;
+        _logger.LogDebug("Published integration event {EventType} with routing key {RoutingKey}", typeof(TEvent).Name, routingKey);
+
+        return Task.CompletedTask;
     }
 
-    public void Subscribe<TEvent, THandler>() where TEvent : IDomainEvent where THandler : IIntegrationEventHandler<TEvent>
+    public void Dispose()
     {
-        var eventName = typeof(TEvent).Name;
-        _channel.ExchangeDeclare(exchange: eventName, type: ExchangeType.Fanout);
-        var queueName = _channel.QueueDeclare().QueueName;
-        _channel.QueueBind(queue: queueName, exchange: eventName, routingKey: string.Empty);
-
-        var consumer = new EventingBasicConsumer(_channel);
-        consumer.Received += async (model, ea) =>
-        {
-            var body = ea.Body.ToArray();
-            var message = Encoding.UTF8.GetString(body);
-            var @event = JsonSerializer.Deserialize<TEvent>(message);
-
-            if (@event != null)
-            {
-                // In a real app, we'd resolve THandler from DI
-                _logger.LogInformation("Event {EventName} received and processed.", eventName);
-            }
-
-            _channel.BasicAck(ea.DeliveryTag, false);
-        };
-
-        _channel.BasicConsume(queue: queueName, autoAck: false, consumer: consumer);
+        _channel?.Dispose();
+        _connection?.Dispose();
     }
 }

@@ -1,5 +1,6 @@
 using MediatR;
 using SokoHub.Application.Common.Errors;
+using SokoHub.Application.Common.Interfaces;
 using SokoHub.Application.Common.Results;
 using SokoHub.Contracts.Auth;
 using SokoHub.Domain.Interfaces;
@@ -26,15 +27,27 @@ public sealed class GetCurrentUserHandler : IRequestHandler<GetCurrentUserQuery,
             return Result<UserDto>.Failure(new ApplicationError("user_not_found", "User not found."));
         }
 
+        var roles = await _unitOfWork.Repository<Role>().ListAsync(
+            new UserRolesSpecification(user.RoleIds), cancellationToken);
+        var roleNames = roles.Select(r => r.Name).ToList();
+
         var userDto = new UserDto(
             user.Id,
             user.Email.Value,
             user.Phone.Value,
             user.DisplayName,
-            ["Customer"],
+            roleNames,
             user.Status == UserStatus.Active,
             user.CreatedAt);
 
         return Result<UserDto>.Success(userDto);
+    }
+}
+
+public sealed class UserRolesSpecification : Specification<Role>
+{
+    public UserRolesSpecification(IReadOnlyList<Guid> roleIds)
+        : base(r => roleIds.Contains(r.Id))
+    {
     }
 }

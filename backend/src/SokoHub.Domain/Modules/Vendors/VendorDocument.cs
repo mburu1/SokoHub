@@ -1,4 +1,5 @@
 using SokoHub.Domain.Common;
+using SokoHub.Domain.Common.ValueObjects;
 
 namespace SokoHub.Domain.Modules.Vendors;
 
@@ -23,4 +24,7 @@ public sealed class VendorDocument : Entity
     public string DocumentUrl { get; private set; } = string.Empty;
     public string Checksum { get; private set; } = string.Empty;
     public DateTimeOffset UploadedAt { get; private set; }
+
+    public static VendorDocument Create(Guid vendorId, Guid documentId, string verifiedBy) =>
+        new(Guid.NewGuid(), vendorId, "KYC", $"verified-by-{verifiedBy}", documentId.ToString("N"));
 }

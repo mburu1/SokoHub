@@ -30,25 +30,28 @@ public sealed class SearchProductsHandler : IRequestHandler<SearchProductsQuery,
         var total = await _unitOfWork.Repository<Product>().CountAsync(spec, cancellationToken);
 
         var response = products.Select(p => new ProductResponse(
-            p.Id,
-            p.Name,
-            p.Slug.Value,
-            p.Description,
-            p.Status.ToString(),
-            p.VendorId,
-            p.CategoryId)).ToList();
+             p.Id,
+             p.VendorId,
+             p.CategoryId,
+             p.BrandId,
+             p.Name,
+             p.Slug.Value,
+             p.Description,
+             p.Status.ToString())).ToList();
 
-        return Result<PagedResult<ProductResponse>>.Success(new PagedResult<ProductResponse>(response, total, request.PagedRequest));
+        return Result<PagedResult<ProductResponse>>.Success(new PagedResult<ProductResponse>(response, total, request.PagedRequest.Page, request.PagedRequest.PageSize));
     }
 }
 
-public class ProductSearchSpecification : Specification<Product>
-{
-    public ProductSearchSpecification(string? query, Guid? categoryId, Guid? brandId, PagedRequest pagedRequest)
-        : base(p =>
-            (string.IsNullOrEmpty(query) || p.Name.Contains(query, StringComparison.OrdinalIgnoreCase)) &&
-            (!categoryId.HasValue || p.CategoryId == categoryId) &&
-            (!brandId.HasValue || p.BrandId == brandId))
+    public class ProductSearchSpecification : Specification<Product>
     {
+        public ProductSearchSpecification(string? query, Guid? categoryId, Guid? brandId, PagedRequest pagedRequest)
+            : base(p =>
+                (string.IsNullOrEmpty(query) || p.Name.Contains(query, StringComparison.OrdinalIgnoreCase)) &&
+                (!categoryId.HasValue || p.CategoryId == categoryId) &&
+                (!brandId.HasValue || p.BrandId == brandId))
+        {
+            ApplyOrderByDescending(p => p.CreatedAt);
+            ApplyPaging(pagedRequest.Page, pagedRequest.PageSize);
+        }
     }
-}

@@ -1,15 +1,14 @@
 using MediatR;
+using SokoHub.Application.Common.Errors;
+using SokoHub.Application.Common.Results;
 using SokoHub.Domain.Interfaces;
 using SokoHub.Domain.Modules.Orders;
-using SokoHub.Application.Common.Interfaces;
-using SokoHub.Application.Common.Results;
-using SokoHub.Application.Common.Errors;
 
 namespace SokoHub.Application.Modules.Orders;
 
-public record ConfirmOrderCommand(Guid OrderId) : IRequest<Result>;
+public record ConfirmOrderCommand(Guid OrderId) : IRequest<Result<bool>>;
 
-public sealed class ConfirmOrderHandler : IRequestHandler<ConfirmOrderCommand, Result>
+public sealed class ConfirmOrderHandler : IRequestHandler<ConfirmOrderCommand, Result<bool>>
 {
     private readonly IUnitOfWork _unitOfWork;
 
@@ -18,26 +17,24 @@ public sealed class ConfirmOrderHandler : IRequestHandler<ConfirmOrderCommand, R
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<Result> Handle(ConfirmOrderCommand request, CancellationToken cancellationToken)
+    public async Task<Result<bool>> Handle(ConfirmOrderCommand request, CancellationToken cancellationToken)
     {
         var order = await _unitOfWork.Repository<Order>().GetByIdAsync(request.OrderId, cancellationToken);
-
-        if (order == null)
+        if (order is null)
         {
-            return Result.Failure(new ApplicationError("order_not_found", "Order not found."));
+            return Result<bool>.Failure(new ApplicationError("order_not_found", $"Order {request.OrderId} was not found."));
         }
 
         try
         {
             order.Confirm();
         }
-        catch (Exception ex)
+        catch (SokoHub.Domain.Common.Exceptions.DomainValidationException ex)
         {
-            return Result.Failure(new ApplicationError("confirm_failed", ex.Message));
+            return Result<bool>.Failure(new ApplicationError(ex.Code, ex.Message));
         }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-        return Result.Success();
+        return Result<bool>.Success(true);
     }
 }

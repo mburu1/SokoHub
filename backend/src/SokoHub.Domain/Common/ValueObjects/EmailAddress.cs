@@ -31,6 +31,8 @@ public sealed partial record EmailAddress
         return new EmailAddress(trimmed);
     }
 
+    public static EmailAddress Create(string value) => Parse(value);
+
     public override string ToString() => Value;
 
     public static implicit operator string(EmailAddress email) => email.Value;

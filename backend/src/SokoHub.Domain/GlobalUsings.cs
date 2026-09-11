@@ -3,4 +3,5 @@ global using SokoHub.Domain.Common.DomainEvents;
 global using SokoHub.Domain.Common.Entities;
 global using SokoHub.Domain.Common.Exceptions;
 global using SokoHub.Domain.Common.Guards;
+global using SokoHub.Domain.Common.Specifications;
 global using SokoHub.Domain.Common.ValueObjects;

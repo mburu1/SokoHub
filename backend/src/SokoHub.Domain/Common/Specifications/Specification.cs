@@ -19,6 +19,19 @@ public abstract class Specification<T> : ISpecification<T>
 
     public bool IsPagingEnabled => Take is not null;
 
+    protected Specification()
+    {
+    }
+
+    protected Specification(Expression<Func<T, bool>> criteria)
+    {
+        _criteria = criteria;
+    }
+
+    private Expression<Func<T, bool>>? _criteria;
+
+    public override Expression<Func<T, bool>> Criteria => _criteria ?? throw new InvalidOperationException("Criteria must be set in derived class or via constructor.");
+
     public Specification<T> AddInclude(Expression<Func<T, object>> include)
     {
         Includes.Add(include);

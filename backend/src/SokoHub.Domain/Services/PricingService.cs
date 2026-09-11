@@ -16,7 +16,7 @@ public class PricingService : IPricingService
 {
     public Money CalculateItemPrice(ProductVariant variant, Coupon? coupon = null)
     {
-        var basePrice = variant.Price;
+        var basePrice = variant.Price.EffectivePrice(DateTimeOffset.UtcNow);
 
         if (coupon != null && coupon.IsApplicableTo(variant))
         {

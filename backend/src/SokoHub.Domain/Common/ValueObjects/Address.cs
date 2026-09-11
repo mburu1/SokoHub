@@ -31,6 +31,15 @@ public sealed record Address
         Ensure.That(CountryCode.Length == 2, "country", "Country must be an ISO 3166-1 alpha-2 code.");
     }
 
+    public static Address Create(
+        string line1,
+        string city,
+        string county,
+        string? line2 = null,
+        string? postalCode = null,
+        string countryCode = "KE") =>
+        new(line1, city, county, line2, postalCode, countryCode);
+
     public override string ToString()
     {
         var line2 = string.IsNullOrWhiteSpace(Line2) ? string.Empty : $", {Line2}";

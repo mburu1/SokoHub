@@ -1,9 +1,9 @@
 using MediatR;
-using SokoHub.Application.Common.Results;
 using SokoHub.Application.Common.Errors;
-using SokoHub.Domain.Modules.Cart;
+using SokoHub.Application.Common.Results;
+using SokoHub.Domain.Common.Specifications;
 using SokoHub.Domain.Interfaces;
-using SokoHub.Application.Common.Interfaces;
+using DomainCart = SokoHub.Domain.Modules.Cart;
 
 namespace SokoHub.Application.Modules.Cart;
 
@@ -22,13 +22,22 @@ public sealed class RemoveCartItemHandler : IRequestHandler<RemoveCartItemComman
 
     public async Task<Result> Handle(RemoveCartItemCommand request, CancellationToken cancellationToken)
     {
-        var cart = await _unitOfWork.Repository<Cart>().GetByUserIdAsync(_currentUser.Id, cancellationToken);
+        var cart = await _unitOfWork.Repository<DomainCart.Cart>().SingleAsync(
+            new CartByUserIdSpecification(_currentUser.Id), cancellationToken);
+
         if (cart == null)
         {
             return Result.Failure(new ApplicationError("cart_not_found", "Cart not found."));
         }
 
-        cart.RemoveItem(request.ProductVariantId);
+        try
+        {
+            cart.RemoveItem(request.ProductVariantId);
+        }
+        catch (SokoHub.Domain.Common.Exceptions.DomainValidationException ex)
+        {
+            return Result.Failure(new ApplicationError(ex.Code, ex.Message));
+        }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 

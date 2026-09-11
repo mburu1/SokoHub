@@ -32,6 +32,12 @@ public sealed class User : AggregateRoot
 
     public string SecurityStamp { get; private set; } = string.Empty;
 
+    public string? ResetTokenHash { get; private set; }
+
+    public DateTimeOffset? ResetTokenExpiresAt { get; private set; }
+
+    public string? EmailVerificationTokenHash { get; private set; }
+
     public UserStatus Status { get; private set; }
 
     public int FailedAccessCount { get; private set; }
@@ -141,6 +147,47 @@ public sealed class User : AggregateRoot
         Status = UserStatus.Disabled;
         RevokeAllRefreshTokens(reason);
         IncrementVersion();
+    }
+
+    public void SetResetToken(string tokenHash, DateTimeOffset expiresAt)
+    {
+        Ensure.NotBlank(tokenHash);
+        ResetTokenHash = tokenHash;
+        ResetTokenExpiresAt = expiresAt;
+        Touch();
+    }
+
+    public string ConsumeResetToken(string tokenHash)
+    {
+        Ensure.That(
+            ResetTokenHash != null && ResetTokenExpiresAt > DateTimeOffset.UtcNow,
+            "reset_token_invalid",
+            "Reset token is invalid or expired.");
+        Ensure.That(ResetTokenHash == tokenHash, "reset_token_invalid", "Reset token does not match.");
+
+        var stamp = ResetTokenHash;
+        ResetTokenHash = null;
+        ResetTokenExpiresAt = null;
+        Touch();
+        return stamp;
+    }
+
+    public void SetEmailVerificationToken(string tokenHash)
+    {
+        EmailVerificationTokenHash = Ensure.NotBlank(tokenHash);
+        Touch();
+    }
+
+    public void ConfirmEmail(string tokenHash)
+    {
+        Ensure.That(
+            EmailVerificationTokenHash != null,
+            "email_token_invalid",
+            "Email verification token is missing.");
+        Ensure.That(EmailVerificationTokenHash == tokenHash, "email_token_invalid", "Email verification token does not match.");
+
+        EmailVerificationTokenHash = null;
+        Verify();
     }
 
     private void RotateSecurityStamp() => SecurityStamp = Guid.CreateVersion7().ToString("N");

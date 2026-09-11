@@ -31,13 +31,14 @@ public sealed class GetListHandler : IRequestHandler<GetListQuery, Result<PagedR
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
             .Select(p => new ProductResponse(
-                p.Id,
-                p.Name,
-                p.Slug.Value,
-                p.Description,
-                p.Status.ToString(),
-                p.VendorId,
-                p.CategoryId))
+                 p.Id,
+                 p.VendorId,
+                 p.CategoryId,
+                 p.BrandId,
+                 p.Name,
+                 p.Slug.Value,
+                 p.Description,
+                 p.Status.ToString()))
             .ToList();
 
         return Result<PagedResult<ProductResponse>>.Success(new PagedResult<ProductResponse>(

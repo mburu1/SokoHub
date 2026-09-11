@@ -7,5 +7,5 @@ public interface IWriteRepository<T>
 
     void Update(T aggregate);
 
-    void Remove(T aggregate);
+    void Delete(T aggregate);
 }

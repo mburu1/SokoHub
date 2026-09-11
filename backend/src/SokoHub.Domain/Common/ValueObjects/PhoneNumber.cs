@@ -36,6 +36,8 @@ public sealed partial record PhoneNumber
         return new PhoneNumber(e164, digits, defaultCountryCode);
     }
 
+    public static PhoneNumber Create(string value) => Parse(value);
+
     public static PhoneNumber Kenya(string value) => Parse(value, "KE");
 
     public override string ToString() => E164;

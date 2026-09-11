@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Logging;
-using SokoHub.Reporting;
 using SokoHub.Domain.Interfaces;
 
 namespace SokoHub.Reporting;
