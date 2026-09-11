@@ -1,5 +1,7 @@
+using SokoHub.Contracts.IntegrationEvents;
+
 namespace SokoHub.Contracts.Events.Customers;
 
-public class CustomerVerifiedIntegrationEvent
-{
-}
+public record CustomerVerifiedIntegrationEvent(
+    Guid CustomerId,
+    string VerificationChannel) : IntegrationEvent;

@@ -58,7 +58,7 @@ public sealed class Product : AggregateRoot
         Guid? id = null)
     {
         var product = new Product(
-            id ?? Guid.Empty,
+            id ?? Guid.NewGuid(),
             Ensure.NotEmpty(vendorId),
             Ensure.NotEmpty(categoryId),
             brandId,
@@ -101,6 +101,14 @@ public sealed class Product : AggregateRoot
         _attributes.Add(attribute);
         Touch();
         return attribute;
+    }
+
+    public void UpdateDetails(string name, string description, Guid? brandId = null)
+    {
+        Name = Ensure.MaxLength(Ensure.NotBlank(name), 200);
+        Description = Ensure.MaxLength(Ensure.NotBlank(description), 8000);
+        BrandId = brandId;
+        Touch();
     }
 
     public void Recategorize(Guid categoryId)

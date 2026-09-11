@@ -48,7 +48,7 @@ public sealed class User : AggregateRoot
 
     public static User Register(EmailAddress email, PhoneNumber phone, string displayName, string passwordHash, Guid? id = null) =>
         new(
-            id ?? Guid.Empty,
+            id ?? Guid.NewGuid(),
             email,
             phone,
             Ensure.MaxLength(Ensure.NotBlank(displayName), 120),

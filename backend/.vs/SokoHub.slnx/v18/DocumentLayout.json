@@ -3,16 +3,12 @@
   "WorkspaceRootPath": "D:\\Mwangi Wa Mburu\\Coding\\SokoHub\\backend\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{BFC5D642-5463-08D9-D537-B5BEEA7F94ED}|src\\SokoHub.Domain\\SokoHub.Domain.csproj|d:\\mwangi wa mburu\\coding\\sokohub\\backend\\src\\sokohub.domain\\common\\aggregateroot\\aggregateroot.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{BFC5D642-5463-08D9-D537-B5BEEA7F94ED}|src\\SokoHub.Domain\\SokoHub.Domain.csproj|solutionrelative:src\\sokohub.domain\\common\\aggregateroot\\aggregateroot.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{BFC5D642-5463-08D9-D537-B5BEEA7F94ED}|src\\SokoHub.Domain\\SokoHub.Domain.csproj|d:\\mwangi wa mburu\\coding\\sokohub\\backend\\src\\sokohub.domain\\services\\pricingservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{BFC5D642-5463-08D9-D537-B5BEEA7F94ED}|src\\SokoHub.Domain\\SokoHub.Domain.csproj|solutionrelative:src\\sokohub.domain\\services\\pricingservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{BFC5D642-5463-08D9-D537-B5BEEA7F94ED}|src\\SokoHub.Domain\\SokoHub.Domain.csproj|d:\\mwangi wa mburu\\coding\\sokohub\\backend\\src\\sokohub.domain\\interfaces\\iunitofwork.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{BFC5D642-5463-08D9-D537-B5BEEA7F94ED}|src\\SokoHub.Domain\\SokoHub.Domain.csproj|solutionrelative:src\\sokohub.domain\\interfaces\\iunitofwork.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{F6D9AD94-71DA-14F4-A7B9-C8A8D13D1F16}|src\\SokoHub.Application\\SokoHub.Application.csproj|d:\\mwangi wa mburu\\coding\\sokohub\\backend\\src\\sokohub.application\\auth\\loginuser.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{F6D9AD94-71DA-14F4-A7B9-C8A8D13D1F16}|src\\SokoHub.Application\\SokoHub.Application.csproj|solutionrelative:src\\sokohub.application\\auth\\loginuser.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{BFC5D642-5463-08D9-D537-B5BEEA7F94ED}|src\\SokoHub.Domain\\SokoHub.Domain.csproj|d:\\mwangi wa mburu\\coding\\sokohub\\backend\\src\\sokohub.domain\\modules\\promotions\\coupon.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{BFC5D642-5463-08D9-D537-B5BEEA7F94ED}|src\\SokoHub.Domain\\SokoHub.Domain.csproj|solutionrelative:src\\sokohub.domain\\modules\\promotions\\coupon.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -31,40 +27,27 @@
             {
               "$type": "Document",
               "DocumentIndex": 0,
-              "Title": "AggregateRoot.cs",
-              "DocumentMoniker": "D:\\Mwangi Wa Mburu\\Coding\\SokoHub\\backend\\src\\SokoHub.Domain\\Common\\AggregateRoot\\AggregateRoot.cs",
-              "RelativeDocumentMoniker": "src\\SokoHub.Domain\\Common\\AggregateRoot\\AggregateRoot.cs",
-              "ToolTip": "D:\\Mwangi Wa Mburu\\Coding\\SokoHub\\backend\\src\\SokoHub.Domain\\Common\\AggregateRoot\\AggregateRoot.cs",
-              "RelativeToolTip": "src\\SokoHub.Domain\\Common\\AggregateRoot\\AggregateRoot.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAIAAABLAAAAAAAAAA==",
+              "Title": "PricingService.cs",
+              "DocumentMoniker": "D:\\Mwangi Wa Mburu\\Coding\\SokoHub\\backend\\src\\SokoHub.Domain\\Services\\PricingService.cs",
+              "RelativeDocumentMoniker": "src\\SokoHub.Domain\\Services\\PricingService.cs",
+              "ToolTip": "D:\\Mwangi Wa Mburu\\Coding\\SokoHub\\backend\\src\\SokoHub.Domain\\Services\\PricingService.cs",
+              "RelativeToolTip": "src\\SokoHub.Domain\\Services\\PricingService.cs",
+              "ViewState": "AgIAAAwAAAAAAAAAAAAYwBkAAAAZAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-09-09T11:04:17.068Z",
+              "WhenOpened": "2026-09-09T11:53:31.029Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
               "DocumentIndex": 1,
-              "Title": "IUnitOfWork.cs",
-              "DocumentMoniker": "D:\\Mwangi Wa Mburu\\Coding\\SokoHub\\backend\\src\\SokoHub.Domain\\Interfaces\\IUnitOfWork.cs",
-              "RelativeDocumentMoniker": "src\\SokoHub.Domain\\Interfaces\\IUnitOfWork.cs",
-              "ToolTip": "D:\\Mwangi Wa Mburu\\Coding\\SokoHub\\backend\\src\\SokoHub.Domain\\Interfaces\\IUnitOfWork.cs",
-              "RelativeToolTip": "src\\SokoHub.Domain\\Interfaces\\IUnitOfWork.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAkwAYAAAAZAAAAAAAAAA==",
+              "Title": "Coupon.cs",
+              "DocumentMoniker": "D:\\Mwangi Wa Mburu\\Coding\\SokoHub\\backend\\src\\SokoHub.Domain\\Modules\\Promotions\\Coupon.cs",
+              "RelativeDocumentMoniker": "src\\SokoHub.Domain\\Modules\\Promotions\\Coupon.cs",
+              "ToolTip": "D:\\Mwangi Wa Mburu\\Coding\\SokoHub\\backend\\src\\SokoHub.Domain\\Modules\\Promotions\\Coupon.cs",
+              "RelativeToolTip": "src\\SokoHub.Domain\\Modules\\Promotions\\Coupon.cs",
+              "ViewState": "AgIAACUAAAAAAAAAAAAtwDEAAAAoAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-09-09T11:04:14.33Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 2,
-              "Title": "LoginUser.cs",
-              "DocumentMoniker": "D:\\Mwangi Wa Mburu\\Coding\\SokoHub\\backend\\src\\SokoHub.Application\\Auth\\LoginUser.cs",
-              "RelativeDocumentMoniker": "src\\SokoHub.Application\\Auth\\LoginUser.cs",
-              "ToolTip": "D:\\Mwangi Wa Mburu\\Coding\\SokoHub\\backend\\src\\SokoHub.Application\\Auth\\LoginUser.cs",
-              "RelativeToolTip": "src\\SokoHub.Application\\Auth\\LoginUser.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAEAAAAOAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-09-09T10:24:59.85Z",
+              "WhenOpened": "2026-09-09T11:51:11.12Z",
               "EditorCaption": ""
             }
           ]

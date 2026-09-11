@@ -1,5 +1,10 @@
+using SokoHub.Contracts.IntegrationEvents;
+
 namespace SokoHub.Contracts.Events.Payments;
 
-public class PaymentFailedIntegrationEvent
-{
-}
+public record PaymentFailedIntegrationEvent(
+    Guid PaymentId,
+    Guid OrderId,
+    decimal Amount,
+    string FailureReason,
+    string? ErrorCode) : IntegrationEvent;

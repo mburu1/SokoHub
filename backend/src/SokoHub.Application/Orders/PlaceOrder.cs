@@ -1,6 +1,11 @@
 using MediatR;
+using SokoHub.Application.Common.Interfaces;
+using SokoHub.Application.Common.Results;
+using SokoHub.Contracts.Common;
+using SokoHub.Contracts.Events.Orders;
 using SokoHub.Contracts.Orders;
 using SokoHub.Domain.Common.ValueObjects;
+using SokoHub.Domain.Interfaces;
 using SokoHub.Domain.Modules.Orders;
 
 namespace SokoHub.Application.Orders;
@@ -8,49 +13,79 @@ namespace SokoHub.Application.Orders;
 public record PlaceOrderCommand(
     Guid CustomerId,
     IReadOnlyList<OrderLineRequest> Items,
-    SokoHub.Domain.Common.ValueObjects.Address ShippingAddress,
+    AddressDto ShippingAddress,
     decimal ShippingTotal,
-    decimal DiscountTotal) : IRequest<OrderResponse>;
+    decimal DiscountTotal,
+    string? CouponCode = null,
+    string? CustomerNotes = null) : IRequest<Result<OrderResponse>>;
 
-public sealed class PlaceOrderHandler : IRequestHandler<PlaceOrderCommand, OrderResponse>
+public sealed class PlaceOrderHandler : IRequestHandler<PlaceOrderCommand, Result<OrderResponse>>
 {
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IEventBus _eventBus;
 
-    public PlaceOrderHandler(IUnitOfWork unitOfWork)
+    public PlaceOrderHandler(IUnitOfWork unitOfWork, IEventBus eventBus)
     {
         _unitOfWork = unitOfWork;
+        _eventBus = eventBus;
     }
 
-    public async Task<OrderResponse> Handle(PlaceOrderCommand request, CancellationToken cancellationToken)
+    public async Task<Result<OrderResponse>> Handle(PlaceOrderCommand request, CancellationToken cancellationToken)
     {
         var orderNumber = OrderNumber.Next();
+        var address = Address.Create(
+            request.ShippingAddress.Street,
+            request.ShippingAddress.City,
+            request.ShippingAddress.County,
+            request.ShippingAddress.PostalCode,
+            request.ShippingAddress.Country);
+
         var lineDrafts = request.Items.Select(i => new OrderLineDraft(
-            Guid.Empty, // VendorId would be looked up from Product Variant
-            Guid.Empty, // ProductId
-            Guid.Empty, // VariantId
+            Guid.NewGuid(),
+            i.ProductId,
+            i.VariantId,
+            Sku.From(i.Sku),
             i.Sku,
-            i.ProductName,
-            Money.Create(i.UnitPrice),
+            Money.Create(i.UnitPrice, "KES"),
             i.Quantity)).ToList();
 
         var order = Order.Place(
             request.CustomerId,
             orderNumber,
-            request.ShippingAddress,
+            address,
             lineDrafts,
-            Money.Create(request.ShippingTotal),
-            Money.Create(request.DiscountTotal),
-            Percentage.Create(0.16m)); // Default VAT
+            Money.Create(request.ShippingTotal, "KES"),
+            Money.Create(request.DiscountTotal, "KES"),
+            Percentage.Create(0.16m)); // Kenyan VAT 16%
 
-        // await _unitOfWork.Repository<Order>().AddAsync(order);
-        // await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _unitOfWork.Repository<Order>().AddAsync(order, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return new OrderResponse(
+        // Publish OrderCreated event
+        var orderItemsDto = order.Items.Select(item => new OrderItemDto(
+            item.ProductId,
+            item.VariantId,
+            item.ProductName,
+            item.Sku,
+            item.UnitPrice.Amount,
+            item.Quantity,
+            item.VendorId)).ToList();
+
+        await _eventBus.PublishAsync(new OrderCreatedIntegrationEvent(
             order.Id,
             order.Number.Value,
+            order.CustomerId,
+            order.GrandTotal.Amount,
+            order.Currency,
+            orderItemsDto), cancellationToken);
+
+        return Result<OrderResponse>.Success(new OrderResponse(
+            order.Id,
+            order.Number.Value,
+            order.CustomerId,
             order.Status.ToString(),
-            order.GrandTotal.Value,
-            DateTimeOffset.UtcNow,
-            []);
+            order.GrandTotal.Amount,
+            order.Currency,
+            order.CreatedAt));
     }
 }

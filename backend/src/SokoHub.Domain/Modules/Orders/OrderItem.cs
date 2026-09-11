@@ -49,7 +49,7 @@ public sealed class OrderItem : Entity
 
     internal static OrderItem Create(Guid orderId, OrderLineDraft draft) =>
         new(
-            Guid.Empty,
+            Guid.NewGuid(),
             orderId,
             Ensure.NotEmpty(draft.VendorId),
             Ensure.NotEmpty(draft.ProductId),

@@ -35,7 +35,7 @@ public sealed class Vendor : AggregateRoot
 
     public static Vendor Register(Guid userId, string businessName, KraPin taxId, Percentage commissionRate, Guid? id = null) =>
         new(
-            id ?? Guid.Empty,
+            id ?? Guid.NewGuid(),
             userId,
             Ensure.MaxLength(Ensure.NotBlank(businessName), 200),
             taxId,
@@ -44,6 +44,12 @@ public sealed class Vendor : AggregateRoot
     public void UpdateProfile(string businessName)
     {
         BusinessName = Ensure.MaxLength(Ensure.NotBlank(businessName), 200);
+        Touch();
+    }
+
+    public void UpdateCommission(Percentage commissionRate)
+    {
+        CommissionRate = commissionRate;
         Touch();
     }
 

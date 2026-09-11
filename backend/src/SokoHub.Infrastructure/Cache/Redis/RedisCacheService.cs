@@ -1,21 +1,19 @@
-using StackExchange.Redis;
 using System.Text.Json;
-using Microsoft.Extensions.Configuration;
+using StackExchange.Redis;
+using SokoHub.Application.Common.Interfaces;
 
 namespace SokoHub.Infrastructure.Cache.Redis;
 
 public class RedisCacheService : ICacheService
 {
     private readonly IDatabase _database;
-    private readonly IConnectionMultiplexer _redis;
 
     public RedisCacheService(IConnectionMultiplexer redis)
     {
-        _redis = redis;
         _database = redis.GetDatabase();
     }
 
-    public async Task SetAsync<T>(string key, T value, TimeSpan expiration, CancellationToken cancellationToken = default)
+    public async Task SetAsync<T>(string key, T value, TimeSpan? expiration = null, CancellationToken cancellationToken = default)
     {
         var json = JsonSerializer.Serialize(value);
         await _database.StringSetAsync(key, json, expiration);

@@ -1,6 +1,7 @@
 using MediatR;
 using SokoHub.Contracts.Products;
 using SokoHub.Domain.Common.ValueObjects;
+using SokoHub.Domain.Interfaces;
 using SokoHub.Domain.Modules.Catalog;
 
 namespace SokoHub.Application.Products;
@@ -22,17 +23,23 @@ public sealed class AddProductVariantHandler : IRequestHandler<AddProductVariant
 
     public async Task<ProductVariantResponse> Handle(AddProductVariantCommand request, CancellationToken cancellationToken)
     {
-        // var product = await _unitOfWork.Repository<Product>().GetByIdAsync(request.ProductId);
-        // if (product == null) throw new NotFoundException("Product not found");
+        var product = await _unitOfWork.Repository<Product>().GetByIdAsync(request.ProductId, cancellationToken);
+        if (product == null)
+        {
+            throw new KeyNotFoundException($"Product with ID {request.ProductId} was not found.");
+        }
 
-        // var sku = Sku.Create(request.Sku);
-        // var price = ProductPrice.Create(request.Price);
-        // var variant = product.AddVariant(sku, price, request.WeightGrams);
+        var sku = Sku.From(request.Sku);
+        var price = ProductPrice.Create(request.Price);
+        var variant = product.AddVariant(sku, price, request.WeightGrams);
 
-        // await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        // return new ProductVariantResponse(variant.Id, variant.Sku.Value, variant.Price.Value, variant.WeightGrams, variant.IsActive);
-
-        throw new NotImplementedException("AddProductVariant requires repository connectivity.");
+        return new ProductVariantResponse(
+            variant.Id,
+            variant.Sku.Value,
+            variant.Price.Amount,
+            variant.WeightGrams,
+            variant.IsActive);
     }
 }

@@ -48,8 +48,10 @@ public sealed class RegisterUserHandler : IRequestHandler<RegisterUserCommand, R
         return Result<AuthResponse>.Success(new AuthResponse(
             token.AccessToken,
             refresh.TokenHash,
-            new[] { token.Expiration },
+            token.Expiration,
             user.Id,
-            user.Email.Value));
+            user.Email.Value,
+            user.DisplayName,
+            ["Customer"]));
     }
 }

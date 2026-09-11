@@ -1,7 +1,9 @@
-using Microsoft.Extensions.DependencyInjection;
-using SokoHub.Application.Auth;
 using System.Reflection;
 using FluentValidation;
+using MediatR;
+using Microsoft.Extensions.DependencyInjection;
+using SokoHub.Application.Behaviors.Logging;
+using SokoHub.Application.Behaviors.Validation;
 
 namespace SokoHub.Application;
 
@@ -9,11 +11,18 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
+        var assembly = Assembly.GetExecutingAssembly();
+
         // MediatR
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));
+        services.AddMediatR(cfg =>
+        {
+            cfg.RegisterServicesFromAssembly(assembly);
+            cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(LoggingBehavior<,>));
+            cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+        });
 
         // FluentValidation
-        services.AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());
+        services.AddValidatorsFromAssembly(assembly);
 
         return services;
     }

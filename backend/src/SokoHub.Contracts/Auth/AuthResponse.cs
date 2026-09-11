@@ -3,6 +3,8 @@ namespace SokoHub.Contracts.Auth;
 public record AuthResponse(
     string AccessToken,
     string RefreshToken,
-    DateTime[] Expiration,
+    DateTimeOffset Expiration,
     Guid UserId,
-    string Email);
+    string Email,
+    string DisplayName,
+    IReadOnlyList<string> Roles);

@@ -1,8 +1,12 @@
+using SokoHub.Contracts.Common;
+
 namespace SokoHub.Contracts.Orders;
 
 public record OrderPlaceRequest(
     Guid CustomerId,
-    SokoHub.Contracts.Orders.OrderLineRequest[] Items,
-    SokoHub.Domain.Common.ValueObjects.Address ShippingAddress,
+    OrderLineRequest[] Items,
+    AddressDto ShippingAddress,
     decimal ShippingTotal,
-    decimal DiscountTotal);
+    decimal DiscountTotal,
+    string? CouponCode = null,
+    string? CustomerNotes = null);

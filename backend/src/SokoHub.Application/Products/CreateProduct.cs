@@ -1,6 +1,6 @@
 using MediatR;
 using SokoHub.Contracts.Products;
-using SokoHub.Domain.Common.ValueObjects;
+using SokoHub.Domain.Interfaces;
 using SokoHub.Domain.Modules.Catalog;
 
 namespace SokoHub.Application.Products;
@@ -30,8 +30,8 @@ public sealed class CreateProductHandler : IRequestHandler<CreateProductCommand,
             request.Description,
             request.BrandId);
 
-        // await _unitOfWork.Repository<Product>().AddAsync(product);
-        // await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _unitOfWork.Repository<Product>().AddAsync(product, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return new ProductResponse(
             product.Id,
@@ -42,6 +42,6 @@ public sealed class CreateProductHandler : IRequestHandler<CreateProductCommand,
             product.Slug.Value,
             product.Description,
             product.Status.ToString(),
-            []); // Variants would be added in separate commands
+            []);
     }
 }

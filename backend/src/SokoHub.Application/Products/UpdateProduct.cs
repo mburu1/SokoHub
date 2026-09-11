@@ -1,5 +1,6 @@
 using MediatR;
 using SokoHub.Contracts.Products;
+using SokoHub.Domain.Interfaces;
 using SokoHub.Domain.Modules.Catalog;
 
 namespace SokoHub.Application.Products;
@@ -22,14 +23,33 @@ public sealed class UpdateProductHandler : IRequestHandler<UpdateProductCommand,
 
     public async Task<ProductResponse> Handle(UpdateProductCommand request, CancellationToken cancellationToken)
     {
-        // var product = await _unitOfWork.Repository<Product>().GetByIdAsync(request.ProductId);
-        // if (product == null) throw new NotFoundException("Product not found");
+        var product = await _unitOfWork.Repository<Product>().GetByIdAsync(request.ProductId, cancellationToken);
+        if (product == null)
+        {
+            throw new KeyNotFoundException($"Product with ID {request.ProductId} was not found.");
+        }
 
-        // product.UpdateProfile(request.Name, request.Description); // Assuming a helper method
-        // product.Recategorize(request.CategoryId);
+        product.UpdateDetails(request.Name, request.Description, request.BrandId);
+        product.Recategorize(request.CategoryId);
 
-        // await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        throw new NotImplementedException("UpdateProduct requires repository connectivity.");
+        var variants = product.Variants.Select(v => new ProductVariantResponse(
+            v.Id,
+            v.Sku.Value,
+            v.Price.Amount,
+            v.WeightGrams,
+            v.IsActive)).ToList();
+
+        return new ProductResponse(
+            product.Id,
+            product.VendorId,
+            product.CategoryId,
+            product.BrandId,
+            product.Name,
+            product.Slug.Value,
+            product.Description,
+            product.Status.ToString(),
+            variants);
     }
 }

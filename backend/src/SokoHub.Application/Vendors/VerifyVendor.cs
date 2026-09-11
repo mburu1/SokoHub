@@ -1,4 +1,5 @@
 using MediatR;
+using SokoHub.Domain.Interfaces;
 using SokoHub.Domain.Modules.Vendors;
 
 namespace SokoHub.Application.Vendors;
@@ -19,11 +20,14 @@ public sealed class VerifyVendorHandler : IRequestHandler<VerifyVendorCommand, b
 
     public async Task<bool> Handle(VerifyVendorCommand request, CancellationToken cancellationToken)
     {
-        // var vendor = await _unitOfWork.Repository<Vendor>().GetByIdAsync(request.VendorId);
-        // if (vendor == null) throw new NotFoundException("Vendor not found");
+        var vendor = await _unitOfWork.Repository<Vendor>().GetByIdAsync(request.VendorId, cancellationToken);
+        if (vendor == null)
+        {
+            throw new KeyNotFoundException($"Vendor with ID {request.VendorId} was not found.");
+        }
 
-        // vendor.VerifyKyc(request.DocumentId, request.VerifiedBy);
-        // await _unitOfWork.SaveChangesAsync(cancellationToken);
+        vendor.VerifyKyc(request.DocumentId, request.VerifiedBy);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return true;
     }

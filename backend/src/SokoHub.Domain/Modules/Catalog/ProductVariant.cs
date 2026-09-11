@@ -33,7 +33,7 @@ public sealed class ProductVariant : Entity
             Ensure.Positive(grams);
         }
 
-        return new ProductVariant(Guid.Empty, productId, sku, price, weightGrams);
+        return new ProductVariant(Guid.NewGuid(), productId, sku, price, weightGrams);
     }
 
     public void UpdatePrice(ProductPrice price)

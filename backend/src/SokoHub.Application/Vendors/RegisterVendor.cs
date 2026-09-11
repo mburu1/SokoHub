@@ -1,6 +1,7 @@
 using MediatR;
 using SokoHub.Contracts.Vendors;
 using SokoHub.Domain.Common.ValueObjects;
+using SokoHub.Domain.Interfaces;
 using SokoHub.Domain.Modules.Vendors;
 
 namespace SokoHub.Application.Vendors;
@@ -27,8 +28,8 @@ public sealed class RegisterVendorHandler : IRequestHandler<RegisterVendorComman
 
         var vendor = Vendor.Register(request.UserId, request.BusinessName, taxId, commission);
 
-        // await _unitOfWork.Repository<Vendor>().AddAsync(vendor);
-        // await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _unitOfWork.Repository<Vendor>().AddAsync(vendor, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return new VendorResponse(
             vendor.Id,

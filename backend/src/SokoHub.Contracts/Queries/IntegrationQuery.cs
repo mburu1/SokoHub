@@ -1,5 +1,8 @@
+using MediatR;
+
 namespace SokoHub.Contracts.Queries;
 
-public class IntegrationQuery
+public abstract record IntegrationQuery<TResponse>(Guid QueryId) : IRequest<TResponse>
 {
+    protected IntegrationQuery() : this(Guid.NewGuid()) { }
 }
