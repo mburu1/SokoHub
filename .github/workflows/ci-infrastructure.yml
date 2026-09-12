@@ -1,0 +1,104 @@
+name: CI - Infrastructure
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'infra/**'
+      - '.github/workflows/ci-infrastructure.yml'
+  pull_request:
+    paths:
+      - 'infra/**'
+      - '.github/workflows/ci-infrastructure.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  infrastructure-validation:
+    name: Validate infrastructure layout
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate required infrastructure directories
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          required_dirs=(
+            "infra"
+            "infra/terraform"
+            "infra/terraform/environments"
+            "infra/terraform/modules"
+            "infra/terraform/shared"
+            "infra/kubernetes"
+          )
+
+          for dir in "${required_dirs[@]}"; do
+            if [[ ! -d "$dir" ]]; then
+              echo "::error title=Missing infrastructure directory::$dir does not exist"
+              exit 1
+            fi
+          done
+
+          echo "Infrastructure directory structure is valid."
+
+      - name: Detect infrastructure configuration
+        id: detect
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          terraform_files=$(find infra/terraform -type f -name '*.tf' -print -quit)
+          kubernetes_files=$(find infra/kubernetes -type f \( -name '*.yml' -o -name '*.yaml' \) -print -quit)
+
+          if [[ -n "$terraform_files" ]]; then
+            echo "terraform=true" >> "$GITHUB_OUTPUT"
+            echo "Terraform configuration detected: $terraform_files"
+          else
+            echo "terraform=false" >> "$GITHUB_OUTPUT"
+            echo "No Terraform configuration exists yet. Terraform validation will be skipped."
+          fi
+
+          if [[ -n "$kubernetes_files" ]]; then
+            echo "kubernetes=true" >> "$GITHUB_OUTPUT"
+            echo "Kubernetes manifests detected: $kubernetes_files"
+          else
+            echo "kubernetes=false" >> "$GITHUB_OUTPUT"
+            echo "No Kubernetes manifests exist yet. Kubernetes validation will be skipped."
+          fi
+
+      - name: Setup Terraform
+        if: steps.detect.outputs.terraform == 'true'
+        uses: hashicorp/setup-terraform@v4
+
+      - name: Terraform format check
+        if: steps.detect.outputs.terraform == 'true'
+        shell: bash
+        run: terraform fmt -check -recursive infra/terraform
+
+      - name: Infrastructure summary
+        shell: bash
+        run: |
+          {
+            echo "## Infrastructure CI"
+            echo
+            echo "| Area | Status |"
+            echo "|---|---|"
+            if [[ "${{ steps.detect.outputs.terraform }}" == "true" ]]; then
+              echo "| Terraform | detected and format-checked |"
+            else
+              echo "| Terraform | not implemented yet |"
+            fi
+            if [[ "${{ steps.detect.outputs.kubernetes }}" == "true" ]]; then
+              echo "| Kubernetes | manifests detected |"
+            else
+              echo "| Kubernetes | not implemented yet |"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
