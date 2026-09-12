@@ -1,0 +1,95 @@
+name: CI - Frontend
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/ci-frontend.yml'
+  pull_request:
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/ci-frontend.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: frontend-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate frontend
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Detect frontend implementation
+        id: detect
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ -s frontend/package.json ]]; then
+            echo "implemented=true" >> "$GITHUB_OUTPUT"
+            echo "Frontend package.json is present and non-empty."
+          else
+            echo "implemented=false" >> "$GITHUB_OUTPUT"
+            echo "Frontend is currently scaffold-only; package.json is empty or missing."
+          fi
+
+      - name: Setup Node.js
+        if: steps.detect.outputs.implemented == 'true'
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        if: steps.detect.outputs.implemented == 'true'
+        working-directory: frontend
+        run: npm ci
+
+      - name: Lint
+        if: steps.detect.outputs.implemented == 'true'
+        working-directory: frontend
+        run: npm run lint --if-present
+
+      - name: Type check
+        if: steps.detect.outputs.implemented == 'true'
+        working-directory: frontend
+        run: npm run typecheck --if-present
+
+      - name: Test
+        if: steps.detect.outputs.implemented == 'true'
+        working-directory: frontend
+        run: npm test --if-present
+
+      - name: Build
+        if: steps.detect.outputs.implemented == 'true'
+        working-directory: frontend
+        run: npm run build --if-present
+
+      - name: Upload frontend artifact
+        if: steps.detect.outputs.implemented == 'true'
+        uses: actions/upload-artifact@v6
+        with:
+          name: sokohub-frontend-${{ github.sha }}
+          path: |
+            frontend/.output
+            frontend/dist
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Frontend CI summary
+        run: |
+          if [[ "${{ steps.detect.outputs.implemented }}" == "true" ]]; then
+            echo "Frontend implementation validated."
+          else
+            echo "Frontend CI completed as a scaffold validation; implementation is not present yet."
+          fi
