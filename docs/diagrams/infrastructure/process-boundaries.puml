@@ -1,0 +1,123 @@
+@startuml
+title Process Boundaries & Ownership
+
+!theme plain
+skinparam rectangle {
+  BackgroundColor #dae8fc
+  BorderColor #666666
+}
+
+package "Frontend Process" <<Rectangle>> #dae8fc {
+  [Nuxt 3 SSR App\n(Pinia state)]
+}
+
+package "SokoHub.Api Process" <<Rectangle>> #dae8fc {
+  [HTTP Entry Point\nControllers]
+  [API Middleware Pipeline\nCorrelationId, ExceptionHandling,\nSecurityHeaders, DarajaIpAllowlist,\nRateLimit, Idempotency,\nLocalization, AuthN/AuthZ, CORS]
+  [Application Layer\n(CQRS + MediatR)]
+  [Outbox Processor]
+  [Health Check Endpoints\n/DB, Messaging, Redis, External]
+  [Scalar / Swagger UI]
+}
+
+package "SokoHub.Workers Process" <<Rectangle>> #dae8fc {
+  [WorkerHost\n(BackgroundService)]
+  [OrderEventConsumer]
+  [PaymentEventConsumer]
+  [NotificationEventConsumer]
+  [InventoryEventConsumer]
+  [VendorEventConsumer]
+  [PaymentProcessingWorker]
+  [SearchIndexingWorker]
+  [PaymentReconciliationWorker]
+  [SettlementReconciliationWorker]
+  [EtimsReconciliationWorker]
+  [ScheduledJobRegistry]
+}
+
+package "SokoHub.Notifications Process" <<Rectangle>> #dae8fc {
+  [NotificationDispatcher\nEmail, SMS, Push]
+  [NotificationTemplateService]
+}
+
+package "SokoHub.Reporting Process" <<Rectangle>> #dae8fc {
+  [VendorReportService\nAnalytics queries]
+}
+
+node "Shared Infrastructure" {
+  database "RabbitMQ\n(sokohub.events topic exchange)" <<data>>
+  database "Kafka\n(payment, audit, analytics topics)" <<data>>
+  database "Redis\n(cache, sessions, locks, TTL)" <<data>>
+  database "MSSQL\n(primary relational store)" <<data>>
+  database "PostgreSQL\n(analytics read store)" <<data>>
+  database "MySQL\n(promotions engine)" <<data>>
+  database "MongoDB\n(audit, raw callbacks)" <<data>>
+  database "Oracle\n(financial ledger)" <<data>>
+  storage "Blob Storage\n(images, docs)"
+  database "OpenSearch\n(catalog search)"
+}
+
+node "External Services" {
+  [M-Pesa Daraja 3.0] <<external>>
+  [Stripe] <<external>>
+  [Flutterwave] <<external>>
+  [ETI MS] <<external>>
+}
+
+' Ownership relationships (solid = owns/produces, dashed = consumes)
+[SokoHub.Api Process] #..> [MSSQL\n(primary relational store)] : "Writes via\nOutbox + EF\nUnitOfWork"
+[SokoHub.Api Process] #..> [RabbitMQ\n(sokohub.events topic exchange)] : "Publishes domain\nevents to Outbox"
+[SokoHub.Api Process] #..> [Kafka\n(payment, audit, analytics topics)] : "Streams audit &\nanalytics events"
+[SokoHub.Api Process] #..> [MongoDB\n(audit, raw callbacks)] : "Persists raw\nM-Pesa callbacks"
+[SokoHub.Api Process] #..> [OpenSearch\n(catalog search)] : "Indexes catalog\ndata"
+[SokoHub.Api Process] #..> [Blob Storage\n(images, docs)] : "Stores product\nimages, docs"
+[SokoHub.Api Process] #..> [Redis\n(cache, sessions, locks, TTL)] : "Cache, sessions,\nrate-limits, locks"
+[SokoHub.Api Process] #..> [MySQL\n(promotions engine)] : "Reads promotions"
+[SokoHub.Api Process] #..> [M-Pesa Daraja 3.0] : "STK Push\nB2C, Reversal"
+[SokoHub.Api Process] #..> [Stripe] : "Card payment"
+[SokoHub.Api Process] #..> [Flutterwave] : "Card payment"
+[SokoHub.Api Process] #..> [ETI MS] : "Tax invoicing"
+
+[SokoHub.Workers Process] #..> [RabbitMQ\n(sokohub.events topic exchange)] : "Consumes domain\nevents (DLQ handler)"
+[SokoHub.Workers Process] #..> [Kafka\n(payment, audit, analytics topics)] : "Consumes streams,\nproduces analytics"
+[SokoHub.Workers Process] #..> [MSSQL\n(primary relational store)] : "Updates orders,\npayments, ledger"
+[SokoHub.Workers Process] #..> [PostgreSQL\n(analytics read store)] : "Writes reporting\ndata"
+[SokoHub.Workers Process] #..> [Oracle\n(financial ledger)] : "Ledger entries,\nsettlements"
+[SokoHub.Workers Process] #..> [MongoDB\n(audit, raw callbacks)] : "Audit trail writes"
+[SokoHub.Workers Process] #..> [Redis\n(cache, sessions, locks, TTL)] : "Locks, idempotency,\nSTK query TTL"
+[SokoHub.Workers Process] #..> [M-Pesa Daraja 3.0] : "Reconciliation\n(STK Query)"
+[SokoHub.Workers Process] #..> [Blob Storage\n(images, docs)] : "Background index"
+
+[SokoHub.Notifications Process] #..> [RabbitMQ\n(sokohub.events topic exchange)] : "Consumes\nOrderConfirmed,\nPaymentFailed,\nOrderShipped"
+[SokoHub.Notifications Process] #..> [MSSQL\n(primary relational store)] : "Reads customer\ncontact details"
+[SokoHub.Notifications Process] #..> [Redis\n(cache, sessions, locks, TTL)] : "Template cache"
+[SokoHub.Notifications Process] --> [External Email/SMS/Push providers]
+
+[SokoHub.Reporting Process] #..> [PostgreSQL\n(analytics read store)] : "Reads analytics\nread models"
+[SokoHub.Reporting Process] #..> [Kafka\n(payment, audit, analytics topics)] : "Consumes\nanalytics events"
+[SokoHub.Reporting Process] #..> [Redis\n(cache, sessions, locks, TTL)] : "Report cache"
+
+note right of [SokoHub.Api Process]
+  <b>Owns:</b> HTTP pipeline, CQRS dispatch,\nOutbox writes, health probes
+  <b>Owns:</b> Publishing integration events
+end note
+
+note right of [SokoHub.Workers Process]
+  <b>Owns:</b> Event consumption,\nSaga orchestration,\nScheduled jobs,\nReconciliation
+end note
+
+note right of [SokoHub.Notifications Process]
+  <b>Owns:</b> Notification dispatch\n(email/SMS/push)
+end note
+
+note right of [SokoHub.Reporting Process]
+  <b>Owns:</b> Analytics read models,\nRevenue/commission reports
+end note
+
+legend left
+  |<#dae8fc>| Process (deployable unit) |
+  |<#f8cecc>| Database |
+  |<#fff2cc>| External service |
+endlegend
+
+@enduml

@@ -1,0 +1,73 @@
+@startuml
+title Integration Event Catalog
+actor "Checkout Saga" as Saga
+participant "Orders" as Orders
+participant "Payments" as Payments
+participant "Inventory" as Inventory
+participant "Notifications" as Notifications
+participant "Shipping" as Shipping
+participant "Reporting" as Reporting
+participant "Wallet" as Wallet
+database "MSSQL" as Store
+database "MongoDB" as RawStore
+participant "RabbitMQ" as Broker
+participant "Kafka" as Kafka
+participant "Workers" as Workers
+
+== Domain events (RabbitMQ) ==
+Saga -> Broker: publish InventoryReserved
+Broker -> Inventory: consume
+Inventory -> Store: update stock ledger
+Saga -> Broker: publish OrderCreated
+Broker -> Orders: consume
+Orders -> Store: persist order split
+Saga -> Broker: publish PaymentInitiated
+Broker -> Payments: consume
+Payments -> Store: create pending payment
+
+== Integration events ==
+Payments -> Broker: publish PaymentSucceeded
+Broker -> Workers: consume
+Workers -> Inventory: consume reservations
+Inventory -> Store: decrease on-hand
+Workers -> Orders: confirm order
+Orders -> Broker: publish OrderConfirmed
+Broker -> Notifications: consume
+Notifications -> Customer: send confirmation
+Broker -> Reporting: consume
+Reporting -> Store: record analytics
+
+Payments -> Broker: publish PaymentFailed
+Broker -> Workers: consume
+Workers -> Saga: compensate
+Saga -> Inventory: release reservations
+Inventory -> Store: increase available stock
+Saga -> Orders: cancel vendor orders
+Orders -> Broker: publish OrderCancelled
+Broker -> Notifications: consume
+Notifications -> Customer: notify cancellation
+
+== Payout events ==
+Orders -> Broker: publish VendorPayoutReady
+Broker -> Wallet: consume
+Wallet -> Store: create payout ledger entry
+Wallet -> Broker: publish PayoutInitiated
+Broker -> Workers: consume
+Workers -> Wallet: execute B2C payout
+Wallet -> Broker: publish PayoutCompleted
+Broker -> Reporting: consume
+Reporting -> Store: record commission
+
+== Shipment events ==
+Shipping -> Broker: publish OrderShipped
+Broker -> Notifications: consume
+Notifications -> Customer: send tracking update
+Courier -> Api: delivery webhook
+Api -> Orders: mark delivered
+Orders -> Broker: publish OrderDelivered
+Broker -> Notifications: consume
+Notifications -> Customer: send delivery update
+Broker -> Kafka: publish OrderDelivered (audit stream)
+Kafka -> RawStore: persist raw event
+Kafka -> Reporting: consume for analytics
+@enduml

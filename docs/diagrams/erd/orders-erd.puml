@@ -1,0 +1,86 @@
+@startuml
+title Orders ERD - MSSQL
+
+entity Customer {
+  *Id uuid PK
+  UserId uuid FK NN
+  Email EmailAddress NN
+  Phone PhoneNumber NN
+}
+
+entity Order {
+  *Id uuid PK
+  CustomerId uuid FK NN
+  Number OrderNumber NN
+  Status OrderStatus NN
+  ShippingAddress Address NN
+  Currency string NN
+  Subtotal Money NN
+  ShippingTotal Money NN
+  DiscountTotal Money NN
+  TaxTotal Money NN
+  GrandTotal Money NN
+  CreatedAt datetimeoffset NN
+}
+
+entity OrderItem {
+  *Id uuid PK
+  OrderId uuid FK NN
+  VendorId uuid FK NN
+  ProductId uuid FK NN
+  VariantId uuid FK NN
+  Sku Sku NN
+  ProductName string NN
+  UnitPrice Money NN
+  Quantity int NN
+  LineTotal Money NN
+}
+
+entity OrderPayment {
+  *Id uuid PK
+  OrderId uuid FK NN
+  PaymentId uuid FK NN
+  Amount Money NN
+}
+
+entity OrderNote {
+  *Id uuid PK
+  OrderId uuid FK NN
+  Body string NN
+  AuthorId uuid FK NN
+  IsInternal bool NN
+  CreatedAt datetimeoffset NN
+}
+
+entity OrderStatusHistory {
+  *Id uuid PK
+  OrderId uuid FK NN
+  Status OrderStatus NN
+  Note string NN
+  CreatedAt datetimeoffset NN
+}
+
+entity VendorOrder {
+  *Id uuid PK
+  OrderId uuid FK NN
+  VendorId uuid FK NN
+  Status VendorOrderStatus NN
+  TrackingNumber string
+}
+
+Order --> OrderItem : Items
+Order --> OrderPayment : Payments
+Order --> OrderNote : Notes
+Order --> OrderStatusHistory : StatusHistory
+Order --> VendorOrder : VendorOrders
+Order --> Customer : CustomerId
+OrderItem --> Order : OrderId
+OrderItem --> Product : ProductId (from Catalog)
+OrderPayment --> Order : OrderId
+OrderPayment --> Payment : PaymentId (from Payments)
+OrderNote --> Order : OrderId
+OrderStatusHistory --> Order : OrderId
+VendorOrder --> Order : OrderId
+VendorOrder --> Vendor : VendorId (from Vendor)
+
+@enduml

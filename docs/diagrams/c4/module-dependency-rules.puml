@@ -1,0 +1,64 @@
+@startuml
+title SokoHub Module Dependency Rules (Clean Architecture)
+
+rectangle("Domain Layer") as domain {
+    rectangle("SokoHub.Domain\n(Entities, VOs, Events,\nInterfaces, Guards)") as dcore
+}
+
+rectangle("Application Layer") as app {
+    rectangle("SokoHub.Application\n(CQRS Handlers, DTOs,\nValidators, Mappings)") as acore
+}
+
+rectangle("Infrastructure Layer") as infra {
+    rectangle("SokoHub.Infrastructure\n(EF Core, Messaging,\nExternal Clients)") as icore
+}
+
+rectangle("Identity Module") as idmod {
+    rectangle("SokoHub.Identity\n(JWT, RBAC, Refresh Tokens)") as idcore
+}
+
+rectangle("Notification &\nReporting Workers") as workers {
+    rectangle("SokoHub.Notifications\nSokoHub.Reporting\nSokoHub.Workers") as wcore
+}
+
+rectangle("API Entry Point") as api {
+    rectangle("SokoHub.Api\n(Controllers, Middleware)") as apicore
+}
+
+rectangle("Frontend") as frontend {
+    rectangle("Nuxt 3 + Pinia") as fcore
+}
+
+fcore --> apicore : "Calls REST/GraphQL"
+apicore --> idmod : "Auth validation"
+apicore --> acore : "Dispatch via MediatR"
+acore --> dcore : "Uses entities/VOs/events"
+acore --> icore : "Resolves infrastructure\nrepos via DI"
+icore --> dcore : "Implements domain\ninterfaces"
+wcore --> acore : "Consumes domain events\nvia bus"
+icore --> wcore : "Hosts background workers"
+
+note right of dcore
+  Rule: Domain has NO dependencies
+  on any other layer.
+  All dependencies point inward.
+end note
+
+note right of acore
+  Rule: Application depends only
+  on Domain. No infrastructure
+  knowledge.
+end note
+
+note right of icore
+  Rule: Infrastructure depends
+  on Application + Domain.
+  Implements domain interfaces.
+end note
+
+note right of apicore
+  Rule: API depends on all layers
+  only through composition root.
+end note
+
+@enduml

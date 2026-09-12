@@ -1,0 +1,76 @@
+@startuml
+title Inventory ERD - MSSQL
+
+entity Warehouse {
+  *Id uuid PK
+  VendorId uuid
+  Name string NN
+  Address Address NN
+  IsActive bool NN
+}
+
+entity WarehouseZone {
+  *Id uuid PK
+  WarehouseId uuid FK NN
+  Code string NN
+  Name string NN
+}
+
+entity InventoryItem {
+  *Id uuid PK
+  WarehouseId uuid FK NN
+  VariantId uuid FK NN
+  Sku Sku NN
+  OnHand int NN
+  Reserved int NN
+}
+
+entity InventoryReservation {
+  *Id uuid PK
+  InventoryItemId uuid FK NN
+  OwnerId uuid FK NN
+  Quantity int NN
+  ExpiresAt datetimeoffset NN
+  Status InventoryReservationStatus NN
+}
+
+entity InventoryAdjustment {
+  *Id uuid PK
+  InventoryItemId uuid FK NN
+  Delta int NN
+  Reason AdjustmentReason NN
+  Note string
+  CreatedAt datetimeoffset NN
+}
+
+entity InventoryTransfer {
+  *Id uuid PK
+  SourceWarehouseId uuid FK NN
+  DestinationWarehouseId uuid FK NN
+  VariantId uuid FK NN
+  Quantity int NN
+  Status TransferStatus NN
+}
+
+entity StockLedgerEntry {
+  *Id uuid PK
+  InventoryItemId uuid FK NN
+  QuantityDelta int NN
+  Reason string NN
+  CreatedAt datetimeoffset NN
+}
+
+Warehouse --> WarehouseZone : Zones
+Warehouse --> InventoryItem : Items
+InventoryItem --> InventoryReservation : Reservations
+InventoryItem --> InventoryAdjustment : Adjustments
+InventoryItem --> StockLedgerEntry : Ledger
+InventoryTransfer --> Warehouse : "(SourceWarehouseId)\nnaming: Source"
+InventoryTransfer --> Warehouse : "(DestinationWarehouseId)\nnaming: Destination"
+InventoryReservation --> InventoryItem : InventoryItemId
+InventoryAdjustment --> InventoryItem : InventoryItemId
+StockLedgerEntry --> InventoryItem : InventoryItemId
+InventoryTransfer --> Warehouse : SourceWarehouseId
+InventoryTransfer --> Warehouse : DestinationWarehouseId
+
+@enduml

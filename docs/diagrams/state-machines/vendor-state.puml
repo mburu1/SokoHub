@@ -1,0 +1,15 @@
+@startuml
+title Vendor State Machine
+skinparam state {
+  BackgroundColor #F3E8FD
+  BorderColor #6A1B9A
+}
+[*] --> Pending
+Pending --> UnderReview : KYC and documents submitted
+UnderReview --> Active : Compliance approved
+UnderReview --> Rejected : Compliance rejected
+Active --> Suspended : Risk or policy suspension
+Suspended --> Active : Reinstated
+Suspended --> Rejected : Account terminated
+Rejected --> [*]
+@enduml

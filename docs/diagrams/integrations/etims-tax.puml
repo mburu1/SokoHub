@@ -1,0 +1,104 @@
+@startuml
+title SokoHub — eTIMS Tax Integration (KRA)
+
+skinparam componentStyle rectangle
+skinparam arrowColor #1565C0
+skinparam rectangle {
+  BackgroundColor #F6F8FA
+  BorderColor #4A4A4A
+}
+
+package "SokoHub.Api" {
+  boundary "EtimsController\n/api/tax/etims\n[Authorize]" as EtimsCtrl
+  boundary "TaxController\n/api/tax\n[Authorize]" as TaxCtrl
+}
+
+package "Application\n(Modules.Tax)" {
+  control "SubmitEtimsDocumentCommand\n(SubmitEtimsDocumentHandler)" as SubmitCmd
+  control "ReconcileEtimsDocumentCommand\n(ReconcileEtimsDocumentHandler)" as ReconcileCmd
+  control "GenerateInvoiceCommand" as GenInv
+  control "GenerateCreditNoteCommand" as GenCn
+  control "CalculateTaxQuery" as CalcTax
+}
+
+package "Infrastructure\n(Tax.ETims)" {
+  component "EtimsSubmissionService" as SubmitSvc
+  component "EtimsInvoiceService" as InvSvc
+  component "EtimsClient\n(HTTP to KRA eTIMS)" as EtimsCli
+  control "EtimsResponseProcessor\n(parse KRA ack)" as RespProc
+  database "MSSQL\nTax: Invoice,CN,TaxTransaction,\nTaxRate, TaxRule" as TaxDb
+  database "MongoDB\nAudit Trail\n(ETIMS_DOC_AUDIT)" as Audit
+}
+
+control "IEventBus\n(RabbitMQ)" as EventBus
+control "Kafka\n(PaymentEventProducer)" as Kafka
+
+cloud "Kenya Revenue\nAuthority (KRA)\neTIMS API\n(HTTPS/MTLS)" as Kra {
+  queue "Invoice Submission Endpoint" as KraInv
+  queue "Credit Note Endpoint" as KraCn
+  queue "Reconciliation / Query Endpoint" as KraQuery
+}
+
+package "Background Workers" {
+  control "EtimsRetryJob\n(Transient Failures)" as RetryJob
+  control "EtimsReconciliationWorker\n(Daily)" as ReconWorker
+  control "TaxReconciliationJob\n(Daily)" as TaxReconJob
+}
+
+note right of SubmitSvc
+  eTIMS (Electronic Tax\nInvoice Management\nSystem) — KRA\nrequirement for\nVAT-registered vendors.\nDocuments: B2C/B2B\ninvoices + credit notes.
+end note
+
+note right of EtimsCli
+  MTLS client cert;\nOAuth2 bearer;\npayload signed per\nKRA schema (IRN\nreturned on success).
+end note
+
+== On Order Completion ==
+TaxCtrl -> GenInv : GenerateInvoiceCommand\n(order total, tax breakdown)
+GenInv -> InvSvc : build tax document\nfrom Invoice/InvoiceLine
+InvSvc -> TaxDb : Invoice.Create()\n+ TaxTransaction.Create()\nRaise TaxDocumentCreatedEvent
+InvSvc <-- TaxCtrl : documentId
+TaxCtrl -> SubmitCmd : SubmitEtimsDocumentCommand\n(documentId, payload)
+SubmitCmd -> SubmitSvc : SubmitDocumentAsync
+SubmitSvc -> EtimsCli : POST /api/v1/invoice\n(MTLS + bearer\n+ signed payload)
+EtimsCli -> KraInv : HTTPS request
+activate KraInv
+KraInv --> EtimsCli : 200 + IRN\nOR 4xx/5xx error
+deactivate KraInv
+alt success (IRN)
+  EtimsCli --> RespProc : response
+  RespProc -> TaxDb : Invoice.Status =\nSubmitted(ETIMS), IRN set
+  RespProc -> Audit : persist raw KRA\nresponse payload
+  RespProc -> EventBus : Publish TaxInvoiceSubmittedEvent
+  EventBus -> Kafka : audit stream
+else failure (4xx business / 5xx transient)
+  EtimsCli --> RespProc : error
+  RespProc -> TaxDb : Invoice.Status = PendingRetry\n(error code stored)
+  RespProc --> SubmitCmd : failure
+  SubmitCmd --> TaxCtrl : Result.Failure
+  RetryJob -> SubmitSvc : retry with backoff\n(pickup PendingRetry)\nretry count bounded
+end
+TaxDb -> Kafka : TaxTransaction events
+
+== Credit Note (Refund) ==
+TaxCtrl -> GenCn : GenerateCreditNoteCommand\n(payment.Refund)
+GenCn -> InvSvc : credit note document
+InvSvc -> TaxDb : CreditNote.Create()\nstatus=Pending
+InvSvc -> SubmitCmd : SubmitEtimsDocumentCommand\n(CN payload → /api/v1/creditnote)
+SubmitCmd -> KraCn : HTTPS (MTLS)
+KraCn --> RespProc : IRN | error
+RespProc -> TaxDb : CreditNote.Status updated
+
+== Daily Reconciliation ==
+ReconWorker -> ReconcileCmd : ReconcileEtimsDocumentCommand\n(date range)
+ReconcileCmd -> EtimsCli : GET /api/v1/taxinvoice\n(query submitted docs)\n+ GET /invoice/status
+EtimsCli -> KraQuery : HTTPS (MTLS)
+KraQuery --> EtimsCli : submitted doc list\n+ statuses
+EtimsCli --> RespProc : response batch
+RespProc -> TaxDb : reconcile\nvs local TaxTransaction\n→ mismatch flag / match
+
+TaxReconJob -> TaxDb : SELECT documents\npending reconcile
+TaxReconJob -> SubmitSvc : submit missing
+TaxReconJob -> Audit : log reconciliation report
+
+@enduml

@@ -1,0 +1,56 @@
+@startuml
+title Vendor Onboarding Flow
+actor Vendor
+participant "Nuxt Frontend" as Frontend
+participant "SokoHub API" as Api
+participant "Onboarding" as Onboarding
+participant "Identity" as Identity
+participant "KYC" as KYC
+participant "Payments" as Payments
+database "MSSQL" as Store
+participant "RabbitMQ" as Broker
+participant "Workers" as Workers
+participant "Notifications" as Notifications
+
+Vendor -> Frontend: register vendor account
+Frontend -> Api: POST /api/vendors/register
+Api -> Onboarding: create vendor application
+Onboarding -> Store: persist VendorApplication (status=Pending)
+Onboarding --> Api: application id
+Api --> Frontend: application submitted
+Frontend -> Vendor: show pending screen
+
+== KYC verification ==
+Vendor -> Frontend: upload documents
+Frontend -> Api: POST /api/vendors/kyc
+Api -> KYC: submit KYC package
+KYC -> Store: store KYC documents
+KYC -> KYC: verify identity documents
+alt approved
+  KYC -> Onboarding: mark KYC approved
+else rejected
+  KYC -> Onboarding: mark KYC rejected
+  Onboarding -> Notifications: notify vendor of rejection
+  Notifications -> Vendor: rejection notice
+  Onboarding --> Api: rejected
+  Api --> Frontend: rejection
+  Frontend -> Vendor: show rejection reason
+end
+
+== Account activation ==
+Onboarding -> Identity: create vendor user account
+Identity -> Store: persist VendorUser (role=Vendor)
+Identity --> Onboarding: user created
+Onboarding -> Payments: create vendor payout account
+Payments -> Store: create VendorPayoutAccount
+Payments --> Onboarding: payout account ready
+Onboarding -> Store: update VendorApplication status=Approved
+Onboarding -> Broker: publish VendorOnboarded
+Broker -> Workers: consume onboarding event
+Workers -> Notifications: notify vendor of activation
+Notifications -> Vendor: welcome email
+Workers -> Identity: provision vendor portal access
+Onboarding --> Api: onboarding complete
+Api --> Frontend: vendor dashboard ready
+Frontend -> Vendor: redirect to dashboard
+@enduml

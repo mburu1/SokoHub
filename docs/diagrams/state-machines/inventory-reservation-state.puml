@@ -1,0 +1,43 @@
+@startuml
+title Inventory Reservation State Machine
+[*] -> Pending
+Pending -> Reserved : reserve items
+Reserved -> Consumed : payment succeeded
+Reserved -> Released : payment failed / compensation
+Reserved -> Expired : timeout (90s)
+Consumed -> [*]
+Released -> [*]
+Expired -> [*]
+
+state Pending {
+  [*] -> Creating
+  Creating -> Reserved : InventoryReserved
+  Creating -> Failed : stock unavailable
+  Failed -> [*]
+}
+
+state Reserved {
+  [*] -> Active
+  Active -> Consumed : on PaymentSucceeded
+  Active -> Released : on PaymentFailed / compensate
+  Active -> Expired : reservation timeout
+}
+
+state Consumed {
+  [*] -> Decreasing
+  Decreasing -> Committed : stock decreased
+  Committed -> [*]
+}
+
+state Released {
+  [*] -> Restoring
+  Restoring -> Available : stock restored
+  Available -> [*]
+}
+
+state Expired {
+  [*] -> Cleaning
+  Cleaning -> Removed : reservation expired
+  Removed -> [*]
+}
+@enduml

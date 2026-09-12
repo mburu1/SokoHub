@@ -1,0 +1,43 @@
+@startuml
+title Customer ERD - MSSQL
+
+entity Customer {
+  *Id uuid PK
+  UserId uuid FK NN
+  Email EmailAddress NN
+  Phone PhoneNumber NN
+  CreatedAt datetimeoffset NN
+}
+
+entity CustomerAddress {
+  *Id uuid PK
+  CustomerId uuid FK NN
+  Address Address NN
+  IsDefault bool NN
+}
+
+entity CustomerPreference {
+  *Id uuid PK
+  CustomerId uuid FK NN
+  PreferenceKey string NN
+  PreferenceValue string NN
+}
+
+entity User {
+  *Id uuid PK
+  Email EmailAddress NN
+  Phone PhoneNumber NN
+  DisplayName string NN
+  PasswordHash string NN
+  SecurityStamp string NN
+  Status UserStatus NN
+  FailedAccessCount int NN
+  LockoutEnd datetimeoffset
+}
+
+User --> Customer : "(UserId)\none-to-one"
+Customer --> CustomerAddress : Addresses
+Customer --> CustomerPreference : Preferences
+Customer --> User : UserId
+
+@enduml

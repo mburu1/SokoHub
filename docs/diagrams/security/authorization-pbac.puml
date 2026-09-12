@@ -1,0 +1,81 @@
+@startuml
+title SokoHub Authorization — Policy-Based Access Control (PBAC)
+
+skinparam componentStyle rectangle
+
+[Customer\n(Frontend\nNuxt 3)] as Frontend
+package "SokoHub.Api" {
+  [SecurityHeadersMiddleware\n(XSS, CSP, HSTS)] as Headers
+  [ExceptionHandlingMiddleware\nno stack traces] as Exc
+  [HttpsRedirection\n(HTTPS only)] as Https
+  [Routing] as Routing
+  [AuthenticationMiddleware\n(JWT Bearer validation)] as AuthN
+  [AuthorizationMiddleware\n(policy evaluation)] as AuthZ
+  [CORS\n(SokoHubPolicy)] as Cors
+  [RateLimitMiddleware\n(Redis RateLimitStore)] as Rate
+  node "Controller\n(authorize attribute)" as Ctrl
+}
+
+package "Identity Domain\n(SokoHub.Domain)" {
+  [User\nroleIds[] status\nlockout] as User
+  [Role\npermissionIds[]] as Role
+  [Permission\n(name)] as Permission
+  [UserStatus\nenum:\nPendingVerification|Active\n|Locked|Disabled] as Status
+}
+
+database "MSSQL\nUsers/Roles/Permissions" as Db
+node "DarajaIpAllowlistMiddleware\n(Safaricom CIDR)" as IpAllow
+
+Frontend --> Https
+Https --> Routing
+Routing --> AuthN
+AuthN --> AuthZ
+AuthZ --> Cors
+AuthZ --> Rate
+Cors --> Ctrl
+Rate --> Ctrl
+
+Ctrl --> User : resolve\nICurrentUser\n(Id, RoleIds,\nIsAdmin, IsVendor, IsCustomer)
+User --> Role : RoleIds
+Role --> Permission : PermissionIds
+User --> Status : evaluate\nstatus == Active
+
+note right of AuthN
+  Validates JWT signature (HMAC-SHA256)
+  Verifies expiry, issuer, audience
+  Populates User.Roles claims
+  Rejects expired / revoked refresh tokens
+end note
+
+note right of AuthZ
+  Built-in policies:
+    - AdminOnly  (IsAdmin / role = Admin)
+    - VendorOnly (IsVendor)
+    - CustomerOnly (IsCustomer)
+    - RequireAuthenticated
+  Fallback: [Authorize] = authenticated user
+end note
+
+package "Policy Enforcement Points\n(Controller actions)" {
+  [POST /refund\nAdminOnly] as Refund
+  [POST /mpesa/callback\nAllowAnonymous] as Callback
+  [POST /me\nAuthorize] as Me
+}
+
+Ctrl ..> Refund
+Ctrl ..> Callback
+Ctrl ..> Me
+
+Refund --> AuthZ : AdminOnly\n=> IsAdmin claim\ncheck DB Role/Permission
+Me --> AuthZ : RequireAuthenticated\n=> token valid
+Callback --> IpAllow : (separate trust\nboundary — see\nmpesa-callback-security.puml)
+
+legend right
+  |<b>Trust Boundary</b>||
+  |Frontend|Internet|
+  |Api|Perimeter|
+  |Identity Domain|Platform|
+  |Db|Data|
+endlegend
+
+@enduml

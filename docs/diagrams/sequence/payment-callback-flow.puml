@@ -1,0 +1,32 @@
+@startuml
+title M-Pesa Payment Callback Flow
+participant "Daraja" as Daraja
+participant "SokoHub API" as Api
+database "Redis" as Cache
+participant "HandleMpesaCallback" as Handler
+database "MSSQL" as Store
+participant "EventBus" as EventBus
+participant "RabbitMQ" as Broker
+participant "Workers" as Workers
+participant "Notifications" as Notifications
+
+Daraja -> Api: callback payload
+Api --> Daraja: fast HTTP 200
+Api -> Handler: HandleMpesaCallbackCommand
+Handler -> Cache: exists mpesa:receipt:{receipt}
+alt duplicate receipt
+  Handler --> Api: already processed
+else new receipt
+  Handler -> Cache: get mpesa:checkout:{requestId}
+  Handler -> Store: load Payment
+  Handler -> Store: load Order
+  Handler -> Store: apply callback and confirm order
+  Handler -> Cache: set receipt key\nTTL 24 hours
+  Handler -> EventBus: publish OrderConfirmed
+  Handler -> EventBus: publish PaymentSucceeded or PaymentFailed
+  EventBus -> Broker: persist integration events
+  Broker -> Workers: deliver events
+  Workers -> Notifications: notify customer and vendor
+  Handler --> Api: success
+end
+@enduml

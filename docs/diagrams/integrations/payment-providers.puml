@@ -1,0 +1,116 @@
+@startuml
+title SokoHub Payment Providers — Adapter Strategy + Webhook Handling
+
+skinparam rectangle {
+  BackgroundColor #F6F5FA
+}
+
+package "SokoHub.Api" {
+  boundary "PaymentsController\n/api/payments\n[Authorize]" as PayCtrl
+  boundary "MpesaController\n/api/payments/mpesa\n[Authorize]" as MpesaCtrl
+  boundary "StripeController\n/api/payments/stripe/webhook\n[AllowAnonymous]" as StripeCb
+  boundary "FlutterwaveController\n/api/payments/flutterwave/webhook\n[AllowAnonymous]" as FlwCb
+}
+
+package "Application" {
+  control "InitiatePaymentHandler\nPaymentMethod switch\n(Mpesa|Card|Wallet|Bank|COD)" as InitH
+  control "RefundPaymentHandler\n[AdminOnly]" as RefundH
+  queue "PaymentSucceeded/Failed/\nRefunded Integration Events" as Events
+}
+
+package "Infrastructure\n(Payment Adapters)" {
+  control "MpesaService\n(IMpesaService)\nMpesaStk + MpesaC2B" as MpesaAdapter
+  control "StripePaymentService\n(Card)\nStripe SDK" as StripeAdapter
+  control "FlutterwavePaymentService\n(Card)\nFlutterwave SDK" as FlwAdapter
+  control "MpesaWebhookProcessor" as MpesaHook
+  control "StripeWebhookHandler\n(Stripe signature verify)" as StripeHook
+  control "FlutterwaveWebhookHandler\n(FLW-Signature verify)" as FlwHook
+  control "MpesaReversalService\n(MpesaC2B reversal)" as Reversal
+}
+
+database "MSSQL\nPayment aggregate" as Db
+database "MongoDB\nAudit" as Mongo
+
+cloud "Safaricom Daraja\n(STK + B2C)\nMpesaStk/MpesaC2B" as Daraja
+cloud "Stripe\n(Card / Apple Pay)" as Stripe
+cloud "Flutterwave\n(Card / Bank)" as Flutterwave
+cloud "SokoHub Wallet\n(internal ledger)" as Wallet
+node "Bank Transfer\n(awits capture)" as Bank
+node "Cash On Delivery\n(manual)" as Cod
+
+note right of InitH
+  PaymentMethod enum:\n- MpesaStk = 0\n- MpesaC2B = 1\n- Card = 2\n- Wallet = 3\n- BankTransfer = 4\n- CashOnDelivery = 5
+  Card routes to Stripe/Flutterwave\nMpesaStk → MpesaService
+end note
+
+note right of StripeHook
+  Verify Stripe signature\nusing endpoint secret\nbefore mutating state.
+end note
+
+note right of FlwHook
+  Verify Flutterwave\nFLW-Signature hash\nbefore mutating state.
+end note
+
+note right of MpesaHook
+  IP allowlist +\nfast 200 ACK +\nRedis idempotency\n(ADR-003, see\nmpesa-callback-security).
+end note
+
+== Initiate Payment ==
+PayCtrl -> InitH : InitiatePaymentCommand\n(method, phone, amount, currency)
+InitH -> Db : Payment.Create()\nstatus=Pending\nRaise PaymentInitiatedEvent
+InitH -> Events : Publish PaymentInitiatedEvent
+alt MpesaStk
+  InitH -> MpesaAdapter : InitiateStkPushAsync()
+  MpesaAdapter -> Daraja : STK Push API\n(Oauth2 bearer)
+  Daraja --> MpesaAdapter : CheckoutRequestID
+  MpesaAdapter --> InitH : response
+else Card (Stripe)
+  InitH -> StripeAdapter : CreatePaymentIntent/Session
+  StripeAdapter -> Stripe : PaymentIntent
+  Stripe --> StripeAdapter : client_secret / status
+  StripeAdapter --> InitH : PaymentResponse
+else Card (Flutterwave)
+  InitH -> FlwAdapter : Initialize Transaction
+  FlwAdapter -> Flutterwave : API
+  Flutterwave --> FlwAdapter : redirect / status
+  FlwAdapter --> InitH : PaymentResponse
+else Wallet
+  InitH -> Wallet : debit wallet ledger\n(debit WalletTransaction)
+  Wallet --> InitH : status
+else BankTransfer / COD
+  InitH -> Db : mark method\n(status awaits capture)
+end
+InitH -> Db : Payment.UpdateStatus()\nPersist
+InitH --> PayCtrl : PaymentResponse
+
+== Webhook / Callback ==
+Daraja --> MpesaCtrl : STK callback\n(HTTPS, IP allowlisted)
+MpesaCtrl -> MpesaHook : HandleMpesaCallbackCommand
+MpesaHook -> Db : Payment.ApplyCallback\n(Succeeded/Failed) + idempotency
+MpesaHook -> Mongo : persist raw callback
+MpesaHook -> Events : PaymentSucceeded/Failed
+
+Stripe --> StripeCb : webhook\n(Stripe-Signature)
+StripeCb -> StripeHook : verify signature\n(raw body)
+StripeHook -> Db : Payment.ApplyCallback / Refund
+StripeHook -> Events : PaymentSucceeded/Refunded
+
+Flutterwave --> FlwCb : webhook\n(FLW-Signature)
+FlwCb -> FlwHook : verify signature
+FlwHook -> Db : Payment.ApplyCallback
+FlwHook -> Events : PaymentSucceeded/Failed
+
+== Refund ==
+PayCtrl -> RefundH : POST {id}/refund\n[AdminOnly]\n(amount, reason)
+RefundH -> Db : Payment.Refund()\nstatus=Refunded|PartiallyRefunded
+RefundH -> Events : Publish PaymentRefundedIntegrationEvent
+alt Mpesa refund
+  RefundH -> Reversal : reverse via Daraja
+  Reversal -> Daraja : reversal API
+else Card refund
+  RefundH -> StripeAdapter : Refund API\n(or Flutterwave)
+  StripeAdapter -> Stripe : Refund
+end
+RefundH --> PayCtrl : 200
+
+@enduml

@@ -1,0 +1,72 @@
+@startuml
+title M-Pesa Callback Security — Fast ACK + Idempotent Offload
+
+skinparam shadowing false
+skinparam backgroundColor #FEF9F6
+skinparam sequenceArrowThickness 2
+
+actor "Safaricom\n(Daraja Callback)" as Safaricom
+cloud "Internet (HTTPS)" as Internet
+
+package "SokoHub.Api" {
+  [DarajaIpAllowlistMiddleware\nIP allowlist:\nSafaricom ranges] as IpAllow
+  boundary "MpesaController\n/api/payments/mpesa/callback\n[AllowAnonymous]" as MpesaCtrl
+  control "MpesaController\nStkCallback()" as StkCb
+}
+
+package "Application" {
+  queue "Background Queue\n(inbox / outbox" as Queue
+  control "HandleMpesaCallbackHandler\n(HandleMpesaCallbackCommand)" as Handler
+}
+
+entity "Redis Cache\nICacheService" as Redis
+  database "MSSQL\nPayment (ApplyCallback)" as Db
+database "MongoDB\nMpesaCallbackDocument\n(raw payload audit)" as Mongo
+control "Publish\nOrderConfirmed\nPaymentSucceeded\nPaymentFailed" as Events
+
+' === inbound callback path ===
+Safaricom --> Internet : HTTPS POST\nDarajaCallbackPayload
+Internet --> IpAllow : remote IP\nin Safaricom CIDR?
+note right of IpAllow
+  daraja-callback-security.md:\n- HTTPS only\n- IP allowlist (Safaricom ranges)\n- Idempotency on\n  CheckoutRequestID + MpesaReceiptNumber\n- Never heavy work\n  in HTTP thread
+end note
+
+alt IP NOT in allowlist
+  IpAllow --> Safaricom : 403 Forbidden
+  stop
+end
+
+IpAllow --> MpesaCtrl : 200 Accepted\n(fast ACK, non-blocking)
+
+note right of MpesaCtrl
+  Controller extracts:\nCheckoutRequestID,\nResultCode, MpesaReceiptNumber,\nAmount — then\nreturns 200 IMMEDIATELY.\nHeavy work deferred to queue.
+end note
+
+MpesaCtrl -> Queue : enqueue\nHandleMpesaCallbackCommand\n(CheckoutRequestID,\nResultCode, Receipt, Amount)
+MpesaCtrl --> Internet : 200 OK fast ACK
+
+' === background processing path ===
+Queue -> Handler : HandleMpesaCallbackCommand
+note right of Handler
+  Idempotency: Redis key\n"mpesa:receipt:{Receipt}"\n(24h TTL) — dedupe
+end note
+Handler -> Redis : ExistsAsync(\n"mpesa:receipt:{receipt}")
+alt receipt already processed
+  Handler -> Redis : log warning\nduplicate callback
+  Handler -->> Queue : Result.Success(true)\n(skip)
+else new receipt
+  Handler -> Redis : GetAsync<\nGuid>("mpesa:checkout:{CheckoutRequestID}")\n(10m TTL from STK initiation)
+  Handler -> Db : Payment.ApplyCallback(\nresultCode==0 => Succeeded,\namount/currency mismatch\nvalidation, duplicate guard)
+  Handler -> Mongo : (audit) raw callback\npersisted via MpesaCallbackDocumentRepository
+  Handler -> Redis : SetAsync(\n"mpesa:receipt:{receipt}",\npaymentId, 24h)
+  alt payment succeeded
+    Handler -> Events : Publish OrderConfirmedIntegrationEvent
+    Handler -> Events : Publish PaymentSucceededIntegrationEvent
+    Events --> Db : persist\noutbox/inbox
+    Events --> Kafka : PaymentEventProducer\n(high-throughput stream)
+  else payment failed
+    Handler -> Events : Publish PaymentFailedIntegrationEvent
+  end
+end
+note over Handler,Db : Payment aggregate raises\nPaymentInitiated/\nPaymentSucceeded/\nPaymentFailed domain event\n(ADR-003 idempotency)
+@enduml

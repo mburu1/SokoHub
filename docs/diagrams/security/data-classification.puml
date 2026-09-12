@@ -1,0 +1,86 @@
+@startuml
+title SokoHub Data Classification
+
+skinparam rectangle {
+  BackgroundColor<<Public>> #E8F5E9
+  BorderColor<<Public>> #2E7D32
+  BackgroundColor<<Internal>> #E3F2FD
+  BorderColor<<Internal>> #1565C0
+  BackgroundColor<<Confidential>> #FFF3E0
+  BorderColor<<Confidential>> #E65100
+  BackgroundColor<<Restricted>> #FFEBEE
+  BorderColor<<Restricted>> #B71C1C
+}
+
+package "Classification Legend" {
+  rectangle "Public\n(<<Public>>)\nMarketing content, public catalog\nno access control on read" <<Public>> as L1
+  rectangle "Internal\n(<<Internal>>)\nOperational data, internal logs" <<Internal>> as L2
+  rectangle "Confidential\n(<<Confidential>>)\nPII + financial PII,\naccess logged" <<Confidential>> as L3
+  rectangle "Restricted\n(<<Restricted>>)\nPayment card data,\npassword hashes, secrets" <<Restricted>> as L4
+}
+
+package "Trust Zone: Platform" {
+  database "MSSQL\n(User DB)" as Mssql {
+    rectangle "User <<Confidential>>" as U
+    rectangle "User.Email <<Confidential>>" as Ue
+    rectangle "User.Phone <<Confidential>>" as Up
+    rectangle "User.Address <<Confidential>>" as Ua
+    rectangle "User.PasswordHash <<Restricted>>" as Ph
+    rectangle "User.SecurityStamp <<Restricted>>" as Ss
+    rectangle "RefreshToken.Hash <<Restricted>>" as Rth
+    rectangle "User.ResetTokenHash <<Restricted>>" as Rt
+    rectangle "Order.CustomerId <<Confidential>>" as Oc
+    rectangle "Order.ShippingAddress <<Confidential>>" as Oa
+    rectangle "Order.Payments <<Confidential>>" as Op
+    rectangle "Payment.Amount/Money <<Confidential>>" as Pm
+    rectangle "Payment.Status <<Internal>>" as Ps
+    rectangle "Role/RoleIds <<Internal>>" as Rol
+  }
+
+  database "Oracle\n(Financial Ledger)" as Oracle {
+    rectangle "LedgerEntry <<Confidential>>" as Le
+    rectangle "VendorPayout <<Confidential>>" as Vp
+    rectangle "Settlement <<Confidential>>" as St
+    rectangle "JournalEntryLine <<Confidential>>" as Je
+  }
+
+  database "MongoDB\n(Audit)\n(MpesaCallbackDocument)" as Mongo {
+    rectangle "Raw Daraja callback\npayload <<Confidential>>" as Raw
+    rectangle "AuditTrail <<Internal>>" as Aud
+  }
+
+  database "PostgreSQL\n(Reporting)" as Pg {
+    rectangle "Analytics view\n(Customer/Order aggregate) <<Confidential>>" as An
+    rectangle "SalesReport <<Internal>>" as Sr
+  }
+
+  database "Redis\n(cache/session)" as Redis {
+    rectangle "mpesa:checkout:{id}\n(paymentId, 10m) <<Internal>>" as Rc
+    rectangle "mpesa:receipt:{n}\n(dedupe, 24h) <<Internal>>" as Rr
+    rectangle "RateLimit:ip:{ip} <<Internal>>" as Rl
+    rectangle "Session/ cart <<Confidential>>" as Rs
+  }
+
+  cloud "OpenSearch\n(Search index)" as Os {
+    rectangle "Product index\n(title, brand, category)\n<<Public>>" as Pi
+  }
+}
+
+note right of U
+  PII (KDA).\nConsent, purpose-limitation,\naccess/erasure on record.
+end note
+note right of Ph
+  NEVER returned by API.\nBCrypt-hashed at rest.\nRotate on password change.
+end note
+note right of Raw
+  Kept for 90 days\n(reconciliation/audit).\nPII in MpesaReceiptNumber.\nEncrypt at rest.
+end note
+note right of Os
+  No PII — product catalog only.\nFaceted search (ADR-011).
+end note
+
+L1 -[hidden]down- L2
+L2 -[hidden]down- L3
+L3 -[hidden]down- L4
+
+@enduml

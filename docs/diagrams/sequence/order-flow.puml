@@ -1,0 +1,42 @@
+@startuml
+title Order Lifecycle Flow
+actor Customer
+participant "Nuxt Frontend" as Frontend
+participant "SokoHub API" as Api
+participant "Orders" as Orders
+participant "Payments" as Payments
+participant "RabbitMQ" as Broker
+participant "Workers" as Workers
+participant "Shipping" as Shipping
+participant "Notifications" as Notifications
+
+Customer -> Frontend: place order
+Frontend -> Api: POST /api/orders
+Api -> Orders: PlaceOrder
+Orders -> Payments: create pending payment
+Orders --> Api: order response
+Api --> Frontend: order
+Payments -> Broker: PaymentInitiated
+Broker -> Workers: payment processing
+Customer -> Frontend: complete payment
+Frontend -> Api: payment callback
+Api -> Payments: HandleMpesaCallback
+Payments -> Orders: confirm payment
+Orders -> Broker: OrderConfirmed
+Broker -> Workers: order confirmation
+Workers -> Shipping: create shipment
+Workers -> Notifications: send confirmation
+Customer -> Frontend: track order
+Frontend -> Api: GET /api/orders/{id}
+Api -> Orders: load order
+Orders --> Api: order status
+Api --> Frontend: order status
+Vendor -> Api: pack and ship vendor order
+Api -> Orders: pack and ship
+Orders -> Broker: OrderShipped
+Broker -> Notifications: send tracking update
+Courier -> Api: delivery webhook
+Api -> Orders: mark delivered
+Orders -> Broker: OrderDelivered
+Broker -> Notifications: send delivery update
+@enduml

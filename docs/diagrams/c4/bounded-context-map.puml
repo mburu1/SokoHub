@@ -1,0 +1,86 @@
+@startuml
+title SokoHub Bounded Context Map
+
+rectangle("SokoHub") {
+    rectangle("Identity\n& Access") as identity {
+        rectangle("User") as user
+        rectangle("Role") as role
+        rectangle("Permission") as perm
+    }
+    rectangle("Customer\nManagement") as customer {
+        rectangle("Customer") as cust
+        rectangle("CustomerAddress") as addr
+    }
+    rectangle("Vendor\nManagement") as vendor {
+        rectangle("Vendor") as vend
+        rectangle("VendorStore") as vstore
+        rectangle("VendorKyc") as vkyc
+        rectangle("VendorWallet") as vwallet
+    }
+    rectangle("Catalog") as catalog {
+        rectangle("Product") as prod
+        rectangle("Category") as cat
+        rectangle("Brand") as brand
+        rectangle("ProductVariant") as pvar
+    }
+    rectangle("Inventory\n& Warehousing") as inventory {
+        rectangle("InventoryItem") as inv
+        rectangle("Warehouse") as wh
+        rectangle("InventoryReservation") as resv
+        rectangle("InventoryTransfer") as xfer
+    }
+    rectangle("Order\nManagement") as orders {
+        rectangle("Order") as order
+        rectangle("OrderItem") as oitem
+        rectangle("VendorOrder") as vorder
+    }
+    rectangle("Payment\nProcessing") as payments {
+        rectangle("Payment") as pay
+        rectangle("PaymentIntent") as pint
+        rectangle("PaymentRefund") as pref
+    }
+    rectangle("Shipping\n& Fulfillment") as shipping {
+        rectangle("Shipment") as ship
+        rectangle("Courier") as courier
+    }
+    rectangle("Finance &\nSettlement") as finance {
+        rectangle("LedgerAccount") as ledger
+        rectangle("JournalEntry") as journal
+        rectangle("Settlement") as settle
+        rectangle("VendorPayout") as payout
+    }
+    rectangle("Promotions\n& Pricing") as promos {
+        rectangle("Promotion") as promo
+        rectangle("Coupon") as coupon
+    }
+}
+
+user --> cust : CustomerId FK
+cust --> vend : VendorId FK (order items)
+prod --> vend : VendorId FK
+prod --> cat : CategoryId FK
+prod --> brand : BrandId FK
+pvar --> prod : ProductId FK
+inv --> pvar : VariantId FK
+inv --> wh : WarehouseId FK
+resv --> inv : InventoryItemId FK
+xfer --> wh : Source/Dest FK
+order --> cust : CustomerId FK
+oitem --> order : OrderId FK
+oitem --> prod : ProductId FK
+oitem --> vend : VendorId FK
+vorder --> order : OrderId FK
+vorder --> vend : VendorId FK
+pay --> order : OrderId FK
+pint --> pay : PaymentId FK
+pref --> pay : PaymentId FK
+ship --> order : OrderId FK
+ship --> vend : VendorId FK
+ship --> courier : CourierId FK
+payout --> vend : VendorId FK
+settle --> vend : VendorId FK
+journal --> ledger : AccountId FK
+coupon --> promo : PromotionId FK
+promo --> cat : Applies to Category
+
+@enduml

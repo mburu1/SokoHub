@@ -1,0 +1,84 @@
+@startuml
+title SokoHub Authentication — JWT + Refresh Token Flow
+
+actor "Customer / Vendor / Admin" as User
+boundary "AuthController\n/api/auth" as AuthCtrl
+control "LoginUserHandler\n(MediatR)" as LoginCmd
+control "RegisterUserHandler" as RegCmd
+control "RefreshTokenHandler" as RefreshCmd
+control "VerifyEmailHandler" as VerifyCmd
+control "ResetPasswordHandler" as ResetCmd
+control "ForgotPasswordHandler" as ForgotCmd
+control "LogoutCommand\nHandler" as LogoutCmd
+entity "JwtTokenService\n(Infrastructure)" as JwtSvc
+entity "PasswordHasher\n(BCrypt)" as PwdHasher
+database "MSSQL\nUser / RefreshToken" as Db
+database "Redis\nSession Cache" as Redis
+
+
+== Login ==
+User -> AuthCtrl : POST /login\n(email, password)
+AuthCtrl -> LoginCmd : LoginUserCommand
+LoginCmd -> Db : UserByEmailSpecification\nSingleAsync
+LoginCmd -> PwdHasher : VerifyPassword\n(hashed, provided)
+alt invalid credentials
+  LoginCmd --> AuthCtrl : auth_invalid_credentials\nBadRequest
+  AuthCtrl --> User : 400
+else valid credentials
+  LoginCmd -> Db : RecordSuccessfulAccess()\nDecrement failed count
+  LoginCmd -> JwtSvc : GenerateToken(user)\n(HMAC-SHA256, 2h)
+  JwtSvc --> LoginCmd : (accessToken, expiry)
+  LoginCmd -> JwtSvc : GenerateRefreshToken()\n(64-byte RNG)
+  JwtSvc --> LoginCmd : refreshHash
+  LoginCmd -> Db : AddAsync(RefreshToken, 7d)
+  LoginCmd --> AuthCtrl : AuthResponse\n(access, refresh, roles)
+  AuthCtrl --> User : 200 OK
+  User -> Redis : (implicit) access_token\nsession metadata
+end
+
+
+== Register ==
+User -> AuthCtrl : POST /register
+AuthCtrl -> RegCmd : RegisterUserCommand
+RegCmd -> PwdHasher : HashPassword(password)
+RegCmd -> Db : User.Register()\nUserStatus.PendingVerification\nEmailVerificationTokenHash
+RegCmd -> JwtSvc : GenerateToken + GenerateRefreshToken
+RegCmd -> Db : Add User + RefreshToken
+RegCmd --> AuthCtrl : AuthResponse
+AuthCtrl --> User : 200 OK\nemail verification required
+
+
+== OAuth (Social) ==
+User -> AuthCtrl : GET /auth/challenge?provider=google\nOAuthProviderFactory
+AuthCtrl -> OAuthSvc : OAuthService.Challenge(provider)
+OAuthSvc --> AuthCtrl : redirect to provider
+User -->> AuthCtrl : OAuth callback + code
+AuthCtrl -> OAuthSvc : ExchangeCodeAsync\n(provider token)
+OAuthSvc -> JwtSvc : GenerateToken(user)\n+ LinkOAuth account
+OAuthSvc --> AuthCtrl : AuthResponse
+AuthCtrl --> User : 200 OK
+
+
+== Refresh ==
+User -> AuthCtrl : POST /refresh\n(refresh token hash)
+AuthCtrl -> RefreshCmd : RefreshTokenCommand
+RefreshCmd -> Db : RefreshTokenByHashSpecification\nIsActive check + expiry
+alt invalid / expired / revoked
+  RefreshCmd --> AuthCtrl : auth_invalid_token
+  AuthCtrl --> User : 400
+else valid
+  RefreshCmd -> JwtSvc : GenerateToken + GenerateRefreshToken
+  RefreshCmd -> Db : Revoke(old).Add(new, 7d)
+  RefreshCmd --> AuthCtrl : RefreshTokenResponse\n(new access + refresh)
+  AuthCtrl --> User : 200 OK
+end
+
+
+== Authenticated Request ==
+User -> "Any API Endpoint" : Bearer access_token
+"Any API Endpoint" -> JwtSvc : ValidateToken\n(JwtTokenValidator)\nverify signature,\nexpiry, issuer
+JwtSvc --> "Any API Endpoint" : claims principal\n(role claims + identity)\nICurrentUser resolved
+activate JwtSvc
+deactivate JwtSvc
+
+@enduml

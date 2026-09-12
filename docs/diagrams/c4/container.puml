@@ -1,0 +1,32 @@
+@startuml
+title SokoHub Container Diagram
+
+package "SokoHub Platform" {
+    component "Nuxt 3 App" : "Node.js - SSR storefront with Pinia state management" as frontend
+    component "SokoHub.Api" : "ASP.NET Core 10 - API gateway, controllers, middleware, Scalar docs" as api
+    component "SokoHub.Identity" : "ASP.NET Core 10 - JWT authentication, RBAC, refresh tokens" as identity
+    component "SokoHub.Application" : "ASP.NET Core 10 - CQRS use cases, DTOs, validators" as app
+    cloud "RabbitMQ" : "AMQP - Internal domain event bus" as mq
+    cloud "Kafka" : "Kafka - Payment event streaming, audit pipelines" as kafka
+    database "MSSQL" : "MSSQL Server - Users, Orders, Products (primary relational store)" as mssql
+    database "PostgreSQL" : "PostgreSQL - Analytics and reporting read store" as postgres
+    database "MySQL" : "MySQL - Promotions and coupon engine" as mysql
+    database "MongoDB" : "MongoDB - Audit trails, raw API payloads (Daraja)" as mongo
+    database "Oracle" : "Oracle DB - Financial ledger (commissions, fees)" as oracle
+    database "Redis" : "Redis - Cache, sessions, STK Push TTL" as redis
+}
+
+frontend --> api : REST/GraphQL
+api --> identity : Auth check
+api --> app : Dispatch commands/queries
+app --> mq : Publish/consume events
+app --> kafka : Publish/consume events
+app --> mssql : Read/write
+app --> postgres : Read analytics
+app --> mysql : Read/write promos
+app --> mongo : Read/write audit
+app --> oracle : Read/write ledger
+app --> redis : Cache/session
+api --> redis : Session store
+
+@enduml

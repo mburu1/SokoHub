@@ -1,16 +1,7 @@
 {
   "Version": 1,
   "WorkspaceRootPath": "D:\\Mwangi Wa Mburu\\Coding\\SokoHub\\backend\\",
-  "Documents": [
-    {
-      "AbsoluteMoniker": "D:0:0:{BFC5D642-5463-08D9-D537-B5BEEA7F94ED}|src\\SokoHub.Domain\\SokoHub.Domain.csproj|d:\\mwangi wa mburu\\coding\\sokohub\\backend\\src\\sokohub.domain\\services\\pricingservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{BFC5D642-5463-08D9-D537-B5BEEA7F94ED}|src\\SokoHub.Domain\\SokoHub.Domain.csproj|solutionrelative:src\\sokohub.domain\\services\\pricingservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{BFC5D642-5463-08D9-D537-B5BEEA7F94ED}|src\\SokoHub.Domain\\SokoHub.Domain.csproj|d:\\mwangi wa mburu\\coding\\sokohub\\backend\\src\\sokohub.domain\\modules\\promotions\\coupon.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{BFC5D642-5463-08D9-D537-B5BEEA7F94ED}|src\\SokoHub.Domain\\SokoHub.Domain.csproj|solutionrelative:src\\sokohub.domain\\modules\\promotions\\coupon.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    }
-  ],
+  "Documents": [],
   "DocumentGroupContainers": [
     {
       "Orientation": 0,
@@ -18,37 +9,11 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 1,
+          "SelectedChildIndex": -1,
           "Children": [
             {
               "$type": "Bookmark",
               "Name": "ST:128:0:{1fc202d4-d401-403c-9834-5b218574bb67}"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 0,
-              "Title": "PricingService.cs",
-              "DocumentMoniker": "D:\\Mwangi Wa Mburu\\Coding\\SokoHub\\backend\\src\\SokoHub.Domain\\Services\\PricingService.cs",
-              "RelativeDocumentMoniker": "src\\SokoHub.Domain\\Services\\PricingService.cs",
-              "ToolTip": "D:\\Mwangi Wa Mburu\\Coding\\SokoHub\\backend\\src\\SokoHub.Domain\\Services\\PricingService.cs",
-              "RelativeToolTip": "src\\SokoHub.Domain\\Services\\PricingService.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABkAAAAZAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-09-09T11:53:31.029Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 1,
-              "Title": "Coupon.cs",
-              "DocumentMoniker": "D:\\Mwangi Wa Mburu\\Coding\\SokoHub\\backend\\src\\SokoHub.Domain\\Modules\\Promotions\\Coupon.cs",
-              "RelativeDocumentMoniker": "src\\SokoHub.Domain\\Modules\\Promotions\\Coupon.cs",
-              "ToolTip": "D:\\Mwangi Wa Mburu\\Coding\\SokoHub\\backend\\src\\SokoHub.Domain\\Modules\\Promotions\\Coupon.cs",
-              "RelativeToolTip": "src\\SokoHub.Domain\\Modules\\Promotions\\Coupon.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAADEAAAAoAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-09-09T11:51:11.12Z",
-              "EditorCaption": ""
             }
           ]
         }

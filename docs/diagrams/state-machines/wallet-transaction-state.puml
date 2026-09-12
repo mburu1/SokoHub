@@ -1,0 +1,43 @@
+@startuml
+title Wallet Transaction State Machine
+[*] -> Pending
+Pending -> Processing : debit / credit initiated
+Processing -> Completed : ledger entry committed
+Processing -> Failed : provider / validation error
+Failed -> Pending : retry
+Failed -> Cancelled : abandoned
+Completed -> [*]
+Cancelled -> [*]
+
+state Pending {
+  [*] -> Validating
+  Validating -> Processing : amount and balance ok
+  Validating -> Failed : insufficient balance / invalid
+}
+
+state Processing {
+  [*] -> Debiting
+  Debiting -> Completed : wallet debited
+  Debiting -> Failed : debit error
+  [*] -> Crediting
+  Crediting -> Completed : wallet credited
+  Crediting -> Failed : credit error
+}
+
+state Completed {
+  [*] -> Settled
+  Settled -> Posted : WalletTransaction posted
+  Posted -> [*]
+}
+
+state Failed {
+  [*] -> Rollback
+  Rollback -> Pending : retry
+  Rollback -> Cancelled : no retry
+}
+
+state Cancelled {
+  [*] -> Voided
+  Voided -> [*]
+}
+@enduml

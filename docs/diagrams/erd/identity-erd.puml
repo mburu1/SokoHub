@@ -1,0 +1,68 @@
+@startuml
+title Identity ERD - MSSQL
+
+entity User {
+  *Id uuid PK
+  Email EmailAddress NN
+  Phone PhoneNumber NN
+  DisplayName string NN
+  PasswordHash string NN
+  SecurityStamp string NN
+  ResetTokenHash string
+  ResetTokenExpiresAt datetimeoffset
+  EmailVerificationTokenHash string
+  Status UserStatus NN
+  FailedAccessCount int NN
+  LockoutEnd datetimeoffset
+  CreatedAt datetimeoffset NN
+}
+
+entity Role {
+  *Id uuid PK
+  Name string NN
+  NormalizedName string NN
+}
+
+entity Permission {
+  *Id uuid PK
+  Name string NN
+  Description string
+}
+
+entity OAuthAccount {
+  *Id uuid PK
+  UserId uuid FK NN
+  Provider string NN
+  ProviderUserId string NN
+}
+
+entity RefreshToken {
+  *Id uuid PK
+  UserId uuid FK NN
+  TokenHash string NN
+  ExpiresAt datetimeoffset NN
+  IsActive bool NN
+  ReplacedByTokenHash string
+  CreatedAt datetimeoffset NN
+}
+
+entity UserSession {
+  *Id uuid PK
+  UserId uuid FK NN
+  IpAddress string NN
+  UserAgent string NN
+  IsActive bool NN
+  StartedAt datetimeoffset NN
+  EndedAt datetimeoffset
+}
+
+User --> Role : "(RoleIds)\nmany-to-many"
+User --> User : RefreshTokens
+User --> User : Sessions
+User --> OAuthAccount : OAuthAccounts
+Role --> Permission : "(PermissionIds)\nmany-to-many"
+OAuthAccount --> User : UserId
+RefreshToken --> User : UserId
+UserSession --> User : UserId
+
+@enduml

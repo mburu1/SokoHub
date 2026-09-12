@@ -1,0 +1,74 @@
+@startuml
+title Catalog ERD - MSSQL
+
+entity Category {
+  *Id uuid PK
+  Name string NN
+  Slug Slug NN
+  ParentId uuid
+  IsActive bool NN
+}
+
+entity Brand {
+  *Id uuid PK
+  Name string NN
+  Slug Slug NN
+  IsActive bool NN
+}
+
+entity Product {
+  *Id uuid PK
+  VendorId uuid FK NN
+  CategoryId uuid FK NN
+  BrandId uuid
+  Name string NN
+  Slug Slug NN
+  Description string NN
+  Status ProductStatus NN
+  CreatedAt datetimeoffset NN
+}
+
+entity ProductVariant {
+  *Id uuid PK
+  ProductId uuid FK NN
+  Sku Sku NN
+  Price ProductPrice NN
+  WeightGrams int
+  IsActive bool NN
+}
+
+entity ProductAttribute {
+  *Id uuid PK
+  ProductId uuid FK NN
+  Name string NN
+}
+
+entity ProductAttributeValue {
+  *Id uuid PK
+  AttributeId uuid FK NN
+  Value string NN
+}
+
+entity ProductImage {
+  *Id uuid PK
+  ProductId uuid FK NN
+  Url string NN
+  AltText string NN
+  IsPrimary bool NN
+  SortOrder int NN
+}
+
+Category --> Category : "(ParentId)\nself-referencing"
+Category --> Product : Products
+Brand --> Product : Products
+Product --> ProductVariant : Variants
+Product --> ProductAttribute : Attributes
+Product --> ProductImage : Images
+ProductAttribute --> ProductAttributeValue : Values
+ProductVariant --> Product : ProductId
+ProductAttribute --> Product : ProductId
+ProductAttributeValue --> ProductAttribute : AttributeId
+ProductImage --> Product : ProductId
+Product --> Vendor : VendorId (FK from Vendor context)
+
+@enduml

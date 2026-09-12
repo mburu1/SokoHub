@@ -1,0 +1,51 @@
+@startuml
+title SokoHub.Api Component Diagram
+
+package "SokoHub.Api" {
+    component "Controllers" : "ASP.NET - REST endpoints, model binding, action filters" as controller
+    component "Middleware" : "ASP.NET - Exception handling, auth, logging, CORS" as middleware
+    component "Scalar API Docs" : "OSS - OpenAPI/Swagger UI" as scalar
+    component "Hub" : "ASP.NET - Real-time notifications via SignalR" as hub
+}
+
+package "SokoHub.Application" {
+    component "CQRS Dispatcher" : "MediatR - Send/Publish pipeline, behaviors" as cqrs
+    component "Command/Query Handlers" : ".NET - Use case implementations" as handlers
+    component "DTOs & Validators" : ".NET - Input/output models, FluentValidation" as dtos
+    component "AutoMapper Profiles" : ".NET - Domain-to-DTO mapping" as mappings
+}
+
+package "SokoHub.Domain" {
+    component "Entities & Aggregates" : ".NET - Domain models, business logic" as entities
+    component "Value Objects" : ".NET - Immutables: Money, Address, Phone" as vos
+    component "Domain Events" : ".NET - State-change notifications" as events
+    component "Guards" : ".NET - Precondition validation" as guards
+}
+
+package "SokoHub.Infrastructure" {
+    component "Persistence" : ".NET - EF Core repos, unit of work" as persistence
+    component "Event Bus" : ".NET - RabbitMQ/Kafka publishers/subscribers" as eventsBus
+    component "External API Clients" : ".NET - Daraja, Stripe, Courier, ETIMS" as externalApis
+    component "Identity" : ".NET - JWT generation, RBAC checks" as auth
+}
+
+controller --> cqrs : Dispatches
+controller --> middleware : Wrapped by
+middleware --> auth : Validates tokens
+cqrs --> handlers : Invokes
+handlers --> dtos : Maps via
+handlers --> events : Raises
+handlers --> entities : Operates on
+handlers --> vos : Uses
+handlers --> persistence : Reads/writes
+handlers --> eventsBus : Publishes events
+handlers --> externalApis : Calls
+controller --> scalar : Hosts
+controller --> hub : Signals clients
+
+note right of eventsBus
+  Publishes to RabbitMQ (internal events)
+  and Kafka (payment/audit streams)
+end note
+
+@enduml

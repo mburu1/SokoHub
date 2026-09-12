@@ -1,0 +1,84 @@
+@startuml
+title Payments ERD - Oracle (ledger) / MSSQL
+
+entity Payment {
+  *Id uuid PK
+  OrderId uuid FK NN
+  CustomerId uuid FK NN
+  Amount Money NN
+  Method PaymentMethod NN
+  Reference PaymentReference NN
+  Status PaymentStatus NN
+  CreatedAt datetimeoffset NN
+}
+
+entity PaymentIntent {
+  *Id uuid PK
+  PaymentId uuid FK NN
+  Phone PhoneNumber NN
+  CheckoutRequestId string NN
+  MerchantRequestId string NN
+  CreatedAt datetimeoffset NN
+}
+
+entity PaymentAttempt {
+  *Id uuid PK
+  PaymentId uuid FK NN
+  Method PaymentMethod NN
+  CheckoutRequestId string NN
+  StartedAt datetimeoffset NN
+  CompletedAt datetimeoffset
+  Succeeded bool
+}
+
+entity PaymentCallback {
+  *Id uuid PK
+  PaymentId uuid FK NN
+  CheckoutRequestId string NN
+  ResultCode int NN
+  ResultDescription string NN
+  MpesaReceiptNumber string
+  PaidAmount Money
+  ReceivedAt datetimeoffset NN
+}
+
+entity PaymentTransaction {
+  *Id uuid PK
+  PaymentId uuid FK NN
+  Channel string NN
+  ExternalId string NN
+  Amount Money NN
+  CapturedAt datetimeoffset NN
+}
+
+entity PaymentRefund {
+  *Id uuid PK
+  PaymentId uuid FK NN
+  Amount Money NN
+  Reason string NN
+  IsSucceeded bool NN
+  CreatedAt datetimeoffset NN
+}
+
+entity PaymentReconciliation {
+  *Id uuid PK
+  CheckoutRequestId string NN
+  MpesaReceiptNumber string
+  ResultCode int NN
+  ReconciledAt datetimeoffset NN
+}
+
+Payment --> PaymentIntent : Intents
+Payment --> PaymentAttempt : Attempts
+Payment --> PaymentCallback : Callbacks
+Payment --> PaymentTransaction : Transactions
+Payment --> PaymentRefund : Refunds
+Payment --> Order : OrderId
+Payment --> Customer : CustomerId
+PaymentIntent --> Payment : PaymentId
+PaymentAttempt --> Payment : PaymentId
+PaymentCallback --> Payment : PaymentId
+PaymentTransaction --> Payment : PaymentId
+PaymentRefund --> Payment : PaymentId
+
+@enduml

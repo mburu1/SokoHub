@@ -1,0 +1,22 @@
+@startuml
+title Order State Machine
+skinparam state {
+  BackgroundColor #E8F1FB
+  BorderColor #2463A6
+}
+[*] --> Pending
+Pending --> Placed : Place order
+Placed --> Confirmed : Payment confirmed
+Placed --> Cancelled : Cancel before payment
+Confirmed --> Processing : Fulfillment started
+Confirmed --> Cancelled : Cancel before shipment
+Processing --> Shipped : All vendor orders shipped
+Processing --> Cancelled : Cancel before shipment
+Shipped --> Delivered : Delivery confirmed
+Shipped --> Returned : Return requested
+Delivered --> Returned : Return requested
+Delivered --> Refunded : Refund completed
+Returned --> Refunded : Refund completed
+Cancelled --> [*]
+Refunded --> [*]
+@enduml

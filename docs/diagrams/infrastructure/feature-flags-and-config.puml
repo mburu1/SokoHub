@@ -1,0 +1,94 @@
+@startuml
+title Feature Flags & Configuration
+
+!theme plain
+skinparam rectangle {
+  BackgroundColor #dae8fc
+  BorderColor #666666
+}
+skinparam rectangle {
+  BackgroundColor<<flag>> #fff2cc
+  BackgroundColor<<config>> #d5e8d4
+  BackgroundColor<<cache>> #f8cecc
+}
+
+title Feature Flags & Configuration Management
+
+package "Configuration Sources" <<config>> #d5e8d4 {
+  node "appsettings.json\n(base settings)" <<config>>
+  node "Environment Variables\n(container runtime)" <<config>>
+  node "Azure Key Vault / AWS Secrets Manager\n(production secrets)" <<config>>
+}
+
+package "Configuration Binding\n(DependencyInjection.cs)" <<config>> #d5e8d4 {
+  [Api:Pagination\n(DefaultPageSize=20,\nMaxPageSize=100)]
+  [Cors:Origins\n(AllowAnyOrigin\ndev, restricted prod)]
+  [ConnectionStrings:\nDefaultConnection (MSSQL)\nPostgreSQL\nMySQL\nMongoDb\nOracle\nRedis]
+  [Redis:\nConnectionString,\nInstances\n(STK Push TTL,\nSession, Cache)]
+  [RabbitMQ:\nHost, User, Password,\nExchange (sokohub.events)]
+  [Jwt:\nIssuer, Audience,\nSecret (min 32 chars)]
+  [Mpesa:\nDarajaUrl\nShortCode, Passkey,\nCallbackUrl\nB2C settings]
+  [MpesaStkPush, CardPayments,\nVendorPayouts\n(feature flag overrides)]
+}
+
+package "Feature Flag Store" <<flag>> #fff2cc {
+  database "FeatureFlag entity\n(in MSSQL Admin module)" as FF_DB
+  database "SystemSetting entity\n(in MSSQL Admin module)" as SS_DB
+  cloud "Redis Cache\n(ICacheService\nRedisCacheService)" as FF_CACHE
+}
+
+package "Feature Flag Consumers" <<flag>> #fff2cc {
+  node "SokoHub.Api\n(Startup + Middleware)" as API_CONSUMER
+  node "SokoHub.Workers" as WORKERS_CONSUMER
+  node "Payment Module\n(MpesaService,\nStripeService,\nFlutterwaveService)" as PAYMENT_FLAGS
+  node "Notification Module\n(NotificationWorker)" as NOTIF_FLAGS
+}
+
+' Configuration flow
+[appsettings.json\n(base settings)] --> [Configuration Binding\n(DependencyInjection.cs)]
+[Environment Variables\n(container runtime)] --> [Configuration Binding\n(DependencyInjection.cs)]
+[Azure Key Vault / AWS Secrets Manager\n(production secrets)] --> [Configuration Binding\n(DependencyInjection.cs)]
+
+[Configuration Binding\n(DependencyInjection.cs)] --> [Api:Pagination\n(DefaultPageSize=20,\nMaxPageSize=100)]
+[Configuration Binding\n(DependencyInjection.cs)] --> [Cors:Origins\n(AllowAnyOrigin\ndev, restricted prod)]
+[Configuration Binding\n(DependencyInjection.cs)] --> [ConnectionStrings:\nDefaultConnection (MSSQL)\nPostgreSQL\nMySQL\nMongoDb\nOracle\nRedis]
+[Configuration Binding\n(DependencyInjection.cs)] --> [Redis:\nConnectionString,\nInstances\n(STK Push TTL,\nSession, Cache)]
+[Configuration Binding\n(DependencyInjection.cs)] --> [RabbitMQ:\nHost, User, Password,\nExchange (sokohub.events)]
+[Configuration Binding\n(DependencyInjection.cs)] --> [Jwt:\nIssuer, Audience,\nSecret (min 32 chars)]
+[Configuration Binding\n(DependencyInjection.cs)] --> [Mpesa:\nDarajaUrl\nShortCode, Passkey,\nCallbackUrl\nB2C settings]
+
+' Feature flag flow
+FF_DB --> FF_CACHE : "Cache (5 min TTL)\nvia ICacheService"
+SS_DB --> FF_CACHE
+
+FF_CACHE --> API_CONSUMER : "Check feature\nvia ICacheService"
+FF_CACHE --> WORKERS_CONSUMER : "Read at runtime"
+FF_CACHE --> PAYMENT_FLAGS
+FF_CACHE --> NOTIF_FLAGS
+
+node "FeatureManagementExtensions\n(TODO: services.AddFeatureManagement)" as FF_EXT
+
+FF_CACHE --> FF_EXT
+
+note right of FF_DB
+  <b>FeatureFlag entity</b>\n(Domain/Module/Administration)\n\nFlags:\n- <b>MpesaStkPush</b>: Enable/disable\n  M-Pesa STK Push payments\n- <b>CardPayments</b>: Enable/disable\n  Stripe + Flutterwave cards\n- <b>VendorPayouts</b>: Enable/disable\n  B2C vendor payouts\n\nStored in MSSQL,\nqueried by Administration module,
+cached in Redis.
+end note
+
+note right of SS_DB
+  <b>SystemSetting entity</b>\n(Domain/Module/Administration)\n\nRuntime config:\n- Maintenance mode\n- Commission rates\n- Tax rates\n- Currency\n- Max order amount\n\nDynamic updates\n(no restart needed).
+end note
+
+note right of PAYMENT_FLAGS
+  <b>Payment module gates:</b>\n@if (FeatureFlag.MpesaStkPush)\n  → StkPushService\n@if (FeatureFlag.CardPayments)\n  → StripePaymentService\n  → FlutterwavePaymentService\n@if (FeatureFlag.VendorPayouts)\n  → B2cService (payouts)
+end note
+
+note right of API_CONSUMER
+  <b>API reads config at startup:</b>\n- Connection strings\n- JWT settings\n- Rate limits\n- CORS origins\n\n@b build time\n@b Key Vault (prod only)\n@b runtime for feature flags
+end note
+
+note right of [Redis:\nConnectionString,\nInstances\n(STK Push TTL,\nSession, Cache)]
+  <b>Redis usage:</b>\n- ICacheService (caching)\n- Session store\n- STK Push TTL (pending txn)\n- Rate limit counters\n- Distributed locks\n  (RedisDistributedLock)
+end note
+
+@enduml

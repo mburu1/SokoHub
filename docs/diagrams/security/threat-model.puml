@@ -1,0 +1,77 @@
+@startuml
+title SokoHub Threat Model — STRIDE (selected)
+
+skinparam rectangle {
+  BackgroundColor<<Asset>> #FEF9EF
+  BorderColor<<Asset>> #C0392B
+  BackgroundColor<<Boundary>> #E8F5E9
+  BorderColor<<Boundary>> #2E7D32
+  BackgroundColor<<Threat>> #FFF3E0
+  BorderColor<<Threat>> #E65100
+  BackgroundColor<<Mitigation>> #E3F2FD
+  BorderColor<<Mitigation>> #1565C0
+}
+
+package "Threat Model" {
+
+rectangle "Trust Boundary\n(Internet → SokoHub)\n<<Boundary>>" as Perimeter {
+  rectangle "Assets <<Asset>>" {
+    [User Credentials\n(BCrypt hash)\nMSSQL] as Cred
+    [JWT Access Token\n(HMAC-SHA256, 2h)\nclient-side] as Jwt
+    [Refresh Token\n(hash stored, 7d)\nMSSQL] as Refresh
+    [Payment Data\n(Payment, MpesaTransaction)\nMSSQL] as Pay
+    [PII\n(User.Email, Phone,\nAddress)\nMSSQL] as Pii
+    [Raw Callback\nAudits\nMongoDB] as Audit
+  }
+}
+
+rectangle "Trust Boundary\n(SokoHub Internal)\n<<Boundary>>" as Internal {
+  rectangle "Safaricom\n→ M-Pesa STK Callback\n(MpesaController)\n<<Threat>>" as T1
+  rectangle "Token replay / \nJWT forgery\n<<Threat>>" as T2
+  rectangle "Credential stuffing /\npassword spray\n<<Threat>>" as T3
+  rectangle "Payment tampering:\namount mismatch,\nreceipt replay\n<<Threat>>" as T4
+  rectangle "PII exfil / \nunauthorized access\n<<Threat>>" as T5
+}
+}
+
+rectangle "Mitigations <<Mitigation>>" {
+  [HTTPS-only everywhere\n(HttpsRedirection)] as M1
+  [Safaricom IP allowlist\n(DarajaIpAllowlistMiddleware)] as M2
+  [Idempotency keys\nCheckoutRequestID +\nMpesaReceiptNumber\nRedis 24h dedupe\n(ADR-003)] as M3
+  [BCrypt password hashing\n(User.ChangePassword\nrotates SecurityStamp)] as M4
+  [Security Headers\n(CSP, HSTS, X-Frame-Options)\n(SecurityHeadersMiddleware)] as M5
+  [Account lockout\nafter N failed attempts\n(UserStatus.Locked)] as M6
+  [CORS allowlist\n+ per-route\nAuthorize policies] as M7
+  [Refresh token revocation\non change / logout\n(SecurityStamp)] as M8
+}
+
+T1 -- M2
+T1 -- M3
+T2 -- M3
+T2 -- M8
+T3 -- M4
+T3 -- M6
+T4 -- M1
+T4 -- M3
+T5 -- M5
+T5 -- M7
+
+Perimeter -[hidden]--> Internal
+
+note right of T1
+  STRIDE: Tampering / Spoofing\nof M-Pesa callback.
+end note
+note right of T2
+  STRIDE: Spoofing of JWT\nto impersonate users.
+end note
+note right of T3
+  STRIDE: Brute force /\nrepudiation of auth.
+end note
+note right of T4
+  STRIDE: Tampering with\npayment amounts/receipts.
+end note
+note right of T5
+  STRIDE: Information\ndisclosure of PII.
+end note
+
+@enduml

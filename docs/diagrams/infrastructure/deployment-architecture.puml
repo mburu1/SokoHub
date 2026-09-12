@@ -1,0 +1,124 @@
+@startuml
+title SokoHub Deployment Architecture (AKS/EKS)
+
+!theme plain
+skinparam rectangle {
+  BackgroundColor<<internet>> #dae8fc
+  BackgroundColor<<cloud>> #fff2cc
+  BackgroundColor<<k8s>> #dae8fc
+  BackgroundColor<<data>> #f8cecc
+  BackgroundColor<<mq>> #d5e8d4
+  BackgroundColor<<external>> #f5f5f5
+  BorderColor #666666
+}
+
+node "Internet" <<internet>> #dae8fc {
+  [Customer Browser]
+  [M-Pesa Daraja] <<external>> #f5f5f5
+  [Stripe] <<external>> #f5f5f5
+  [Flutterwave] <<external>> #f5f5f5
+  [ETI MS] <<external>> #f5f5f5
+}
+
+node "CDN / Front Door" <<cloud>> #fff2cc {
+  [CloudFront / Front Door]
+  [WAF]
+}
+
+node "Kubernetes Cluster" <<k8s>> #dae8fc {
+  package "Control Plane" {
+    [Ingress Controller\n(NGINX/Traefik)]
+  }
+
+  package "Frontend Tier" {
+    [Frontend Service\n(Nuxt 3 + Pinia)]
+  }
+
+  package "Web Tier" {
+    [API Service\n(SokoHub.Api)\n2+N replicas] <<k8s>>
+    [Workers\n(SokoHub.Workers)] <<k8s>>
+    [Notifications\n(SokoHub.Notifications)] <<k8s>>
+    [Reporting\n(SokoHub.Reporting)] <<k8s>>
+  }
+
+  package "Messaging Tier" {
+    [RabbitMQ Cluster\n(3 nodes)] <<mq>>
+    [Kafka Cluster\n(3 brokers + ZK)] <<mq>>
+  }
+
+  package "Data Tier" {
+    database "MSSQL\n(Azure SQL / RDS)\nUsers, Orders, Catalog, Payments" <<data>>
+    database "PostgreSQL\nAnalytics Read Store" <<data>>
+    database "MySQL\nPromotions & Coupons" <<data>>
+    database "MongoDB\nAudit, Raw Payloads" <<data>>
+    database "Oracle\nFinancial Ledger" <<data>>
+    database "Redis\nCache, Sessions, Locks" <<data>>
+    database "OpenSearch\nCatalog Search" <<data>>
+    storage "Blob Storage\n(Images, Docs)"
+  }
+
+  package "Ingress Rules" {
+    [Public Ingress\nTLS terminated]
+    [Webhook Ingress\nM-Pesa Callback\nIP Allowlist]
+  }
+}
+
+[CDN / Front Door] --> [Ingress Controller\n(NGINX/Traefik)]
+
+[Ingress Controller\n(NGINX/Traefik)] --> [Frontend Service\n(Nuxt 3 + Pinia)]
+[Ingress Controller\n(NGINX/Traefik)] --> [API Service\n(SokoHub.Api)\n2+N replicas]
+[Ingress Controller\n(NGINX/Traefik)] --> [Webhook Ingress\nM-Pesa Callback\nIP Allowlist]
+
+[Webhook Ingress\nM-Pesa Callback\nIP Allowlist] --> [API Service\n(SokoHub.Api)\n2+N replicas]
+
+[Customer Browser] --> [CDN / Front Door]
+[CDN / Front Door] --> [WAF]
+[WAF] --> [Ingress Controller\n(NGINX/Traefik)]
+
+' API dependencies
+[API Service\n(SokoHub.Api)\n2+N replicas] --> [MSSQL\n(Azure SQL / RDS)\nUsers, Orders, Catalog, Payments] : EF Core
+[API Service\n(SokoHub.Api)\n2+N replicas] --> [Redis\nCache, Sessions, Locks] : ICacheService
+[API Service\n(SokoHub.Api)\n2+N replicas] --> [RabbitMQ Cluster\n(3 nodes)] : Publish events (Outbox)
+[API Service\n(SokoHub.Api)\n2+N replicas] --> [Kafka Cluster\n(3 brokers + ZK)] : Analytics/Audit streams
+[API Service\n(SokoHub.Api)\n2+N replicas] --> [MongoDB\nAudit, Raw Payloads]
+[API Service\n(SokoHub.Api)\n2+N replicas] --> [OpenSearch\nCatalog Search]
+[API Service\n(SokoHub.Api)\n2+N replicas] --> [Blob Storage\n(Images, Docs)]
+[API Service\n(SokoHub.Api)\n2+N replicas] --> [Stripe] : Card payment
+[API Service\n(SokoHub.Api)\n2+N replicas] --> [Flutterwave] : Card payment
+[API Service\n(SokoHub.Api)\n2+N replicas] --> [M-Pesa Daraja] : STK Push, B2C, Reversal
+[API Service\n(SokoHub.Api)\n2+N replicas] --> [ETI MS] : Tax invoicing
+
+' Worker dependencies
+[Workers\n(SokoHub.Workers)] --> [RabbitMQ Cluster\n(3 nodes)] : Consume events
+[Workers\n(SokoHub.Workers)] --> [Kafka Cluster\n(3 brokers + ZK)] : Consume/produce
+[Workers\n(SokoHub.Workers)] --> [MSSQL\n(Azure SQL / RDS)\nUsers, Orders, Catalog, Payments]
+[Workers\n(SokoHub.Workers)] --> [Redis\nCache, Sessions, Locks]
+[Workers\n(SokoHub.Workers)] --> [MongoDB\nAudit, Raw Payloads]
+[Workers\n(SokoHub.Workers)] --> [M-Pesa Daraja] : Reconciliation queries
+
+' Notifications dependencies
+[Notifications\n(SokoHub.Notifications)] --> [RabbitMQ Cluster\n(3 nodes)] : Consume notification events
+[Notifications\n(SokoHub.Notifications)] --> [Redis\nCache, Sessions, Locks]
+[Notifications\n(SokoHub.Notifications)] --> [External Email/SMS/Push providers]
+
+' Reporting dependencies
+[Reporting\n(SokoHub.Reporting)] --> [PostgreSQL\nAnalytics Read Store]
+[Reporting\n(SokoHub.Reporting)] --> [Kafka Cluster\n(3 brokers + ZK)] : Consume analytics streams
+
+' Cross-database references
+[MSSQL\n(Azure SQL / RDS)\nUsers, Orders, Catalog, Payments] -[#red,dashed]-> [PostgreSQL\nAnalytics Read Store] : CDC / Sync
+[MSSQL\n(Azure SQL / RDS)\nUsers, Orders, Catalog, Payments] -[#red,dashed]-> [MySQL\nPromotions & Coupons]
+[MSSQL\n(Azure SQL / RDS)\nUsers, Orders, Catalog, Payments] -[#red,dashed]-> [MongoDB\nAudit, Raw Payloads]
+[MSSQL\n(Azure SQL / RDS)\nUsers, Orders, Catalog, Payments] -[#red,dashed]-> [Oracle\nFinancial Ledger]
+
+note right of [API Service\n(SokoHub.Api)\n2+N replicas]
+  <b>ASP.NET Core Web API</b>
+  -- Clean Architecture / DDD + CQRS
+  -- MediatR, EF Core
+  -- Middleware: Correlation, ExceptionHandling,
+  SecurityHeaders, IPAllowlist, RateLimit,
+  Idempotency, Localization, Auth, CORS
+  -- Health checks: DB, Messaging, Redis, External
+end note
+
+@enduml

@@ -1,0 +1,20 @@
+@startuml
+title Shipment State Machine
+skinparam state {
+  BackgroundColor #FFF3E0
+  BorderColor #E65100
+}
+[*] --> Created
+Created --> LabelCreated : Label generated
+LabelCreated --> PickedUp : Courier pickup
+PickedUp --> InTransit : Departed origin
+InTransit --> OutForDelivery : Arrived at destination
+OutForDelivery --> Delivered : Recipient accepts
+OutForDelivery --> FailedAttempt : Delivery attempt failed
+FailedAttempt --> OutForDelivery : Retry delivery
+FailedAttempt --> ReturnedToSender : Attempts exhausted
+InTransit --> ReturnedToSender : Carrier return
+Created --> ReturnedToSender : Shipment cancelled
+Delivered --> [*]
+ReturnedToSender --> [*]
+@enduml

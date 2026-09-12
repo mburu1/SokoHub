@@ -1,0 +1,84 @@
+@startuml
+title SokoHub — Courier / Shipping Integration
+
+skinparam componentStyle rectangle
+skinparam arrowColor #0D47A1
+
+package "SokoHub.Api" {
+  boundary "ShippingController\n/api/shipping" as ShipCtrl
+  boundary "ShipmentsController\n/api/shipments" as ShipApi
+}
+
+package "Application" {
+  control "ShipOrderCommand\n(ShipOrderHandler)" as ShipCmd
+  control "AssignTrackingCommand\n(AssignTrackingHandler)" as TrackCmd
+  control "RecordTrackingEventCommand" as TrackEvt
+}
+
+package "Infrastructure" {
+  component "ShippingService" as ShipSvc
+  component "CourierProviderFactory\n(Select by Code/isActive)" as Factory
+  component "CourierAdapter\n(IPolymorphic)" as Adapter
+  component "AramexAdapter | GDEXAdapter |\nSendyAdapter | PostaAdapter" as Adapters
+  database "MSSQL\nShipment, TrackingEvent,\nCourier" as ShipDb
+  database "MongoDB\nAudit Trail\n(shipment events)" as Audit
+}
+
+package "Domain" {
+  entity "Shipment aggregate:\nOrderId, VendorId, CourierId,\nOrigin, Destination, Cost,\nTrackingNumber, Status\n(Created→LabelCreated→\nPickedUp→InTransit→\nOutForDelivery→Delivered|\nFailedAttempt|ReturnedToSender)" as ShipmentDomain
+  entity "Courier\n(Code, ApiKey,\nApiSecret, IsActive)" as CourierDomain
+}
+
+control "Kafka\n(OrderEventConsumer)" as Kafka
+
+cloud "External Couriers" {
+  cloud "Aramex API\n(REST/HTTPS)" as Aramex
+  cloud "GDEX / Sendy / Posta\n(REST + Webhooks)" as ExtCourier
+}
+
+note right of Factory
+  Select adapter from Courier.Code\n(Aramex, GDEX, Sendy, Posta)\n+ IsActive gate.\nEach courier is a pluggable\nadapter over a common\nShipping interface.
+end note
+
+note right of ShipmentDomain
+  Shipment aggregate:\nOrderId, VendorId,\nCourierId, Origin,\nDestination, Cost,\nTrackingNumber,\nStatus (ShipmentStatus\nenum: Created →\nLabelCreated → PickedUp →\nInTransit → OutForDelivery →\nDelivered | FailedAttempt |\nReturnedToSender)
+end note
+
+== Ship an Order ==
+ShipCmd -> ShipSvc : ShipOrderCommand\n(orderId, vendorId,\nshipAddress)
+ShipSvc -> ShipDb : Shipment.Create()\nstatus=Created\nCourier.CourierId
+ShipSvc -> Factory : Build(Courier.Code)
+Factory --> ShipSvc : selected adapter
+ShipSvc -> Adapter : CreateLabelAsync(\norigin, destination,\ncost)
+Adapter -> ExtCourier : POST /shipment\n(MTLS/apiKey)\n(label request)
+activate ExtCourier
+ExtCourier --> Adapter : label + tracking number\n(carrier tracking id)
+deactivate ExtCourier
+Adapter --> ShipSvc : label, TrackingNumber
+ShipSvc -> ShipDb : Shipment.Status =\nLabelCreated, Tracking# set
+ShipSvc -> Audit : persist label payload\n(raw, 90 days)
+ShipSvc --> ShipCmd : ShipmentId + TrackingNumber
+
+== Handoff to Carrier ==
+ShipApi -> TrackCmd : AssignTrackingCommand\n(shipmentId, tracking#)
+TrackCmd -> ShipSvc : assign
+ShipSvc -> ShipDb : Shipment.AssignTracking()\nstatus=InTransit, ShippedAt
+ShipSvc -> Audit : log status change
+ShipSvc --> ShipApi : 200
+
+OrderEventConsumer -> ShipApi : OrderShippedEvent\n(vendor shipment)\n(from Order.MarkVendorShipped)
+
+== In-Transit Tracking ==
+ExtCourier -> ShipApi : Tracking webhook\n(status update event)
+ShipApi -> TrackEvt : RecordTrackingEventCommand\n(checkpoint, location, ts)
+TrackEvt -> ShipSvc : record
+ShipSvc -> ShipDb : TrackingEvent.Create()\nupdate Shipment.Status\n(InTransit/OutForDelivery/Delivered/\nFailedAttempt/ReturnedToSender)
+ShipSvc -> Audit : append event
+ShipSvc -> Kafka : publish\nShipmentStatusChangedEvent\n→ Order.MarkVendorDelivered\n(when Delivered)
+
+== Delivery ==
+ShipSvc -> ShipDb : Shipment.MarkDelivered()\nstatus=Delivered, DeliveredAt
+ShipSvc -> Audit : log delivered
+ShipSvc --> ShipApi : 200
+
+@enduml

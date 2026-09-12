@@ -1,0 +1,31 @@
+@startuml
+title Inventory Reservation Flow
+participant "Checkout Saga" as Saga
+participant "Inventory" as Inventory
+database "MSSQL" as Store
+participant "RabbitMQ" as Broker
+participant "Workers" as Workers
+participant "Orders" as Orders
+
+Saga -> Inventory: reserve items for checkout
+Inventory -> Store: load InventoryItem
+Inventory -> Store: create InventoryReservation
+Inventory -> Store: write StockLedgerEntry
+Inventory --> Saga: InventoryReserved
+Saga -> Orders: create vendor orders
+Orders --> Saga: order split complete
+PaymentSuccess -> Broker: PaymentSucceeded
+Broker -> Workers: consume payment event
+Workers -> Inventory: consume reservations
+Inventory -> Store: mark reservations consumed
+Inventory -> Store: decrease on-hand
+Inventory --> Workers: stock consumed
+PaymentFailure -> Broker: PaymentFailed
+Broker -> Workers: consume failure event
+Workers -> Inventory: release reservations
+Inventory -> Store: mark reservations released
+Inventory -> Store: increase available stock
+Inventory --> Workers: stock released
+Cleanup -> Inventory: expire stale reservations
+Inventory -> Store: mark reservations expired
+@enduml

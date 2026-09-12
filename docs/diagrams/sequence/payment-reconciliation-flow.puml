@@ -1,0 +1,52 @@
+@startuml
+title Payment Reconciliation Flow
+database "MSSQL" as Store
+database "MongoDB" as RawStore
+participant "PaymentReconciliationWorker" as Worker
+participant "Financial Ledger" as Ledger
+participant "Reconciliation Engine" as Engine
+participant "RabbitMQ" as Broker
+participant "Notifications" as Notifications
+cloud "Safaricom Daraja" as Daraja
+cloud "Stripe" as Stripe
+cloud "Flutterwave" as Flutterwave
+
+== Daily statement pull ==
+Worker -> Daraja: download M-Pesa statement
+Worker -> Stripe: retrieve settlement report
+Worker -> Flutterwave: retrieve ledger report
+Worker -> RawStore: persist raw provider payloads
+
+== Local vs provider comparison ==
+Worker -> Store: load local Payment records
+Worker -> Store: load MpesaTransaction records
+Worker -> Engine: compare local ledger vs provider statements
+Engine -> Ledger: submit comparison batch
+
+alt balanced
+  Engine -> Store: mark reconciliation balanced
+  Engine -> Store: record balanced amount
+  Engine -> Ledger: post balanced totals
+else mismatch
+  Engine -> Store: create variance record
+  Engine -> Ledger: flag mismatch for review
+  Engine -> Broker: publish ReconciliationMismatch
+  Broker -> Notifications: alert finance team
+  Worker -> Store: open investigation case
+  alt manual correction
+    Worker -> Store: apply correction
+    Worker -> Ledger: post corrected totals
+    Worker -> Store: close investigation
+  end
+end
+
+== Settlement ==
+Engine -> Ledger: settle vendor payouts
+Engine -> Store: update payout status
+Engine -> Broker: publish VendorPayoutReady
+Broker -> Workers: consume payout event
+Workers -> Ledger: execute B2C payout
+Ledger -> Daraja: B2C payment request
+Ledger --> Workers: payout result
+Workers -> Store: record payout outcome
+@enduml

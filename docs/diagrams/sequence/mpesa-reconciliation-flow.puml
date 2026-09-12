@@ -1,11 +1,33 @@
 @startuml
-title M-Pesa STK Reconciliation
-participant Worker
-participant StkQuery
-participant Daraja
-participant Ledger
-Worker -> StkQuery: pending > 90s
-StkQuery -> Daraja: stkpushquery
+title M-Pesa Reconciliation Flow
+participant "PaymentTimeoutJob" as TimeoutJob
+participant "StkQueryService" as StkQuery
+participant "Daraja" as Daraja
+database "MSSQL" as Store
+database "MongoDB" as RawStore
+participant "PaymentReconciliationWorker" as Worker
+participant "Financial Ledger" as Ledger
+participant "RabbitMQ" as Broker
+
+TimeoutJob -> Store: find pending STK transactions
+TimeoutJob -> StkQuery: pending older than 90 seconds
+StkQuery -> Daraja: STK push query
 Daraja --> StkQuery: terminal status
-StkQuery -> Ledger: settle / mismatch flag
+StkQuery -> Store: update MpesaTransaction
+alt payment succeeded
+  StkQuery -> Store: mark payment succeeded
+  StkQuery -> Broker: PaymentSucceeded
+else payment failed or unknown
+  StkQuery -> Store: mark failed or investigation required
+end
+Worker -> RawStore: load raw Daraja payloads
+Worker -> Store: load local payment records
+Worker -> Daraja: download statement
+Worker -> Ledger: compare local ledger with statement
+alt balanced
+  Worker -> Store: mark reconciliation balanced
+else mismatch
+  Worker -> Store: create variance record
+  Worker -> Ledger: flag mismatch for review
+end
 @enduml

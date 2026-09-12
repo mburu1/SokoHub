@@ -1,0 +1,135 @@
+@startuml
+title Auto-Scaling & Capacity Management
+
+!theme plain
+skinparam rectangle {
+  BackgroundColor #dae8fc
+  BorderColor #666666
+}
+skinparam rectangle {
+  BackgroundColor<<k8s>> #dae8fc
+  BackgroundColor<<hpa>> #fff2cc
+  BackgroundColor<<keda>> #d5e8d4
+}
+
+title Auto-Scaling & Capacity Management
+
+node "Kubernetes Cluster" <<k8s>> {
+
+  package "API Tier" {
+    node "api\nDeployment\n(2-10 replicas)" <<k8s>> as API_DEP {
+    }
+    cloud "HPA: CPU > 70% or Memory > 80%" <<hpa>> as API_HPA
+    cloud "KEDA: HTTP requests/sec > 1000" <<keda>> as API_KEDA
+  }
+
+  package "Workers Tier" {
+    node "workers\nDeployment\n(1-20 replicas)" <<k8s>> as WORKERS_DEP {
+    }
+    cloud "KEDA: RabbitMQ queue depth > 100 msgs" <<keda>> as WORKERS_HPA
+    cloud "KEDA: Kafka lag > 1000 msgs" <<keda>> as WORKERS_KAFKA
+  }
+
+  package "Notifications Tier" {
+    node "notifications\nDeployment\n(1-8 replicas)" <<k8s>> as NOTIF_DEP {
+    }
+    cloud "KEDA: Rabbit queue depth\n(notification.dispatch)" <<keda>> as NOTIF_HPA
+  }
+
+  package "Search Tier" {
+    node "search\nDeployment\n(1-5 replicas)" <<k8s>> as SEARCH_DEP {
+    }
+    cloud "KEDA: Kafka consumer group lag\n(analytics.events)" <<keda>> as SEARCH_HPA
+  }
+
+  package "Reporting Tier" {
+    node "reporting\nDeployment\n(1-3 replicas)" <<k8s>> as REPORT_DEP {
+    }
+    cloud "HPA: CPU > 60%" <<hpa>> as REPORT_HPA
+  }
+
+  package "Infrastructure Services" {
+    cloud "RabbitMQ Cluster\n(3 nodes, auto-cluster)" <<k8s>> as RABBIT
+    cloud "Kafka Cluster\n(3 brokers, RF=3)" <<k8s>> as KAFKA
+    cloud "Redis Cluster\n(6 nodes: 3 master + 3 replica)" <<k8s>> as REDIS
+  }
+
+  package "Databases" {
+    database "MSSQL\n(vCore autoscale\n2-8 vCores)" as SQL_DB
+    database "PostgreSQL\n(read replicas\n1-3, scale on CPU)" as PG_DB
+    database "MySQL\n(General Purpose\nautoscale)" as MYSQL_DB
+    database "MongoDB\n(Atlas cluster\nautoscale)" as MONGO_DB
+    database "Oracle\n(Manual scale-up)" as ORACLE_DB
+  }
+}
+
+[API_KEDA] -down-> [API_DEP]
+[API_HPA] -down-> [API_DEP]
+[WORKERS_HPA] -down-> [WORKERS_DEP]
+[WORKERS_KAFKA] -down-> [WORKERS_DEP]
+[NOTIF_HPA] -down-> [NOTIF_DEP]
+[SEARCH_HPA] -down-> [SEARCH_DEP]
+[REPORT_HPA] -down-> [REPORT_DEP]
+
+[API_DEP] --> [MSSQL\n(vCore autoscale\n2-8 vCores)]
+[API_DEP] --> [REDIS]
+[WORKERS_DEP] --> [RABBIT]
+[WORKERS_DEP] --> [KAFKA]
+[WORKERS_DEP] --> [MSSQL\n(vCore autoscale\n2-8 vCores)]
+[WORKERS_DEP] --> [PG_DB]
+
+note right of [API_DEP]
+  <b>SokoHub.Api</b> — HPA + KEDA
+  - Scale trigger 1: CPU > 70% (HPA)
+  - Scale trigger 2: HTTP request rate > 1000/sec (KEDA)
+  - Min: 2, Max: 10 replicas
+  - Readiness probe: /health
+  - Shutdown: drain 30s
+end note
+
+note right of [WORKERS_DEP]
+  <b>SokoHub.Workers</b> — KEDA on queue depth
+  - Trigger 1: Rabbit queue depth > 100 (order, payment, inventory events)
+  - Trigger 2: Kafka consumer lag > 1000 (analytics events)
+  - Min: 1, Max: 20 replicas
+  - Each replica processes one queue at a time
+end note
+
+note right of [NOTIF_DEP]
+  <b>SokoHub.Notifications</b> — KEDA on notification queue
+  - Trigger: Rabbit queue depth\n(notification.dispatch > 50)
+  - Min: 1, Max: 8 replicas
+  - Scale-down cooldown: 5 min
+end note
+
+note right of [SEARCH_DEP]
+  <b>SearchIndexingWorker</b> — KEDA on Kafka lag
+  - Trigger: Kafka lag (analytics.events) > 500
+  - Min: 1, Max: 5 replicas
+  - Pause indexing during peak if lag < 100
+end note
+
+note right of [SQL_DB]
+  <b>MSSQL</b> — vCore autoscale
+  - Min: 2 vCores, Max: 8 vCores
+  - Scale on: CPU > 80% for 5 min
+  - RPO: 5min, RTO: 15min
+end note
+
+note right of [PG_DB]
+  <b>PostgreSQL</b> — Read replicas
+  - Primary: 1, Read replicas: 1-3 (KEDA on replica CPU)
+  - Scale reads during reporting hours
+end note
+
+note bottom of node "Kubernetes Cluster"
+  <b>KEDA scalers used:</b>\nRabbitMQ (queue depth), Kafka (consumer lag),\nHTTP (request rate)\n<b>HPA metrics:</b> CPU, Memory
+end note
+
+legend top right
+  |<#dae8fc>| Kubernetes Deployment |
+  |<#fff2cc>| HPA (CPU/Memory) |
+  |<#d5e8d4>| KEDA (event-driven) |
+endlegend
+
+@enduml

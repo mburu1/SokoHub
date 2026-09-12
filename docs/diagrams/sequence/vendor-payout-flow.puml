@@ -1,0 +1,49 @@
+@startuml
+title Vendor Payout Flow
+actor Vendor
+participant "Nuxt Frontend" as Frontend
+participant "SokoHub API" as Api
+participant "RequestPayoutHandler" as RequestHandler
+participant "VendorWallet" as Wallet
+participant "PayoutSaga" as Saga
+participant "SettlementService" as Settlements
+participant "MpesaService" as Mpesa
+participant "Daraja B2C" as Daraja
+participant "Finance Ledger" as Ledger
+participant "EventBus" as EventBus
+participant "RabbitMQ" as Broker
+participant "Notifications" as Notifications
+
+Vendor -> Frontend: request payout amount
+Frontend -> Api: POST /api/vendors/payouts/request
+Api -> RequestHandler: RequestPayoutCommand
+RequestHandler -> Wallet: verify vendor and available balance
+Wallet --> RequestHandler: balance accepted
+RequestHandler -> Wallet: debit payout amount
+RequestHandler -> Saga: start payout process
+Saga -> Settlements: create or link settlement
+Settlements --> Saga: settlement reference
+Saga -> Mpesa: InitiateB2CPayoutAsync
+Mpesa -> Daraja: B2C payment request
+Daraja --> Mpesa: ConversationID
+Mpesa --> Saga: payout initiated
+alt payout callback succeeds
+  Daraja -> Mpesa: B2C callback
+  Mpesa -> Settlements: mark processed
+  Mpesa -> Ledger: record payout journal entry
+  Mpesa -> EventBus: publish VendorPayoutCompleted
+  EventBus -> Broker: route payout event
+  Broker -> Notifications: notify vendor
+  Mpesa --> Api: payout result
+  Api --> Frontend: payout accepted
+else payout fails
+  Daraja --> Mpesa: failure result
+  Mpesa -> Wallet: credit reversal
+  Mpesa -> Settlements: mark failed or pending review
+  Mpesa -> EventBus: publish VendorPayoutFailed
+  EventBus -> Broker: route failure event
+  Broker -> Notifications: notify vendor and finance
+  Mpesa --> Api: failure result
+  Api --> Frontend: payout failed
+end
+@enduml

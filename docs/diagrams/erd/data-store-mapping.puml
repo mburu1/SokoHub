@@ -1,0 +1,116 @@
+@startuml
+title SokoHub Data Store Mapping (Polyglot Persistence)
+
+rectangle("MSSQL Server") as mssql {
+    entity User <<MSSQL>>
+    entity Role <<MSSQL>>
+    entity Permission <<MSSQL>>
+    entity Customer <<MSSQL>>
+    entity CustomerAddress <<MSSQL>>
+    entity CustomerPreference <<MSSQL>>
+    entity Vendor <<MSSQL>>
+    entity VendorStore <<MSSQL>>
+    entity VendorKyc <<MSSQL>>
+    entity VendorDocument <<MSSQL>>
+    entity Product <<MSSQL>>
+    entity Category <<MSSQL>>
+    entity Brand <<MSSQL>>
+    entity ProductVariant <<MSSQL>>
+    entity ProductAttribute <<MSSQL>>
+    entity ProductAttributeValue <<MSSQL>>
+    entity ProductImage <<MSSQL>>
+    entity InventoryItem <<MSSQL>>
+    entity Warehouse <<MSSQL>>
+    entity WarehouseZone <<MSSQL>>
+    entity InventoryAdjustment <<MSSQL>>
+    entity StockLedgerEntry <<MSSQL>>
+    entity Order <<MSSQL>>
+    entity OrderItem <<MSSQL>>
+    entity OrderPayment <<MSSQL>>
+    entity OrderNote <<MSSQL>>
+    entity OrderStatusHistory <<MSSQL>>
+    entity VendorOrder <<MSSQL>>
+    entity Shipment <<MSSQL>>
+    entity Courier <<MSSQL>>
+    entity DeliveryAttempt <<MSSQL>>
+    entity Payment <<MSSQL>>
+    entity PaymentIntent <<MSSQL>>
+    entity PaymentAttempt <<MSSQL>>
+    entity PaymentCallback <<MSSQL>>
+    entity PaymentRefund <<MSSQL>>
+    entity TrackingEvent <<MSSQL>>
+    entity ShipmentItem <<MSSQL>>
+}
+
+rectangle("PostgreSQL") as pg {
+    entity AnalyticsReport <<PG>>
+    entity ReadModel <<PG>>
+    entity DashboardView <<PG>>
+}
+
+rectangle("MySQL") as mysql {
+    entity Promotion <<MySQL>>
+    entity Coupon <<MySQL>>
+    entity CouponUsage <<MySQL>>
+    entity PromotionRule <<MySQL>>
+}
+
+rectangle("MongoDB") as mongo {
+    entity AuditEntry <<Mongo>>
+    entity DarajaCallback <<Mongo>>
+    entity RawApiPayload <<Mongo>>
+}
+
+rectangle("Oracle") as oracle {
+    entity LedgerAccount <<Oracle>>
+    entity FinancialPeriod <<Oracle>>
+    entity JournalEntry <<Oracle>>
+    entity JournalEntryLine <<Oracle>>
+    entity Settlement <<Oracle>>
+    entity VendorPayout <<Oracle>>
+    entity FinancialTransaction <<Oracle>>
+}
+
+rectangle("Redis") as redis {
+    cache Session <<Redis>>
+    cache StkPushTtl <<Redis>>
+    cache DistributedLock <<Redis>>
+}
+
+note right of mssql
+  Primary relational store:
+  Identity, Customers, Vendors,
+  Catalog, Inventory, Orders,
+  Shipping, Payments (transactional)
+end note
+
+note right of pg
+  Analytics read store:
+  Reporting queries, dashboards,
+  denormalized read models
+end note
+
+note right of mysql
+  Promotions engine:
+  Coupons, rules, conditions, usage tracking
+end note
+
+note right of mongo
+  Audit & raw payloads:
+  Daraja callbacks, webhook logs,
+  unstructured API responses
+end note
+
+note right of oracle
+  Financial ledger:
+  GL accounts, journal entries,
+  settlements, vendor payouts
+end note
+
+note right of redis
+  Ephemeral data:
+  User sessions, STK Push TTL,
+  distributed locks, rate limiting
+end note
+
+@enduml

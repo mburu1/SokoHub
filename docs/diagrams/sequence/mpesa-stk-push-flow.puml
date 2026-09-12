@@ -1,0 +1,36 @@
+@startuml
+title M-Pesa STK Push Flow
+actor Customer
+participant "Nuxt Frontend" as Frontend
+participant "SokoHub API" as Api
+participant "Payments" as Payments
+database "Redis" as Cache
+participant "Daraja" as Daraja
+participant "RabbitMQ" as Broker
+participant "Workers" as Workers
+
+Customer -> Frontend: enter phone and amount
+Frontend -> Api: POST /api/payments/initiate
+Api -> Payments: InitiatePayment
+Payments -> Cache: store mpesa:checkout:{id}\nTTL 10 minutes
+Payments -> Daraja: Lipana na M-Pesa Online
+Daraja --> Payments: CheckoutRequestID and MerchantRequestID
+Payments --> Api: payment intent
+Api --> Frontend: STK prompt accepted
+Customer -> Daraja: approve PIN
+Daraja -> Api: POST /api/payments/mpesa/callback
+Api --> Daraja: HTTP 200
+Api -> Payments: HandleMpesaCallback
+Payments -> Cache: check receipt idempotency
+Payments -> Cache: load payment by CheckoutRequestID
+Payments -> Payments: apply callback
+alt result code 0
+  Payments -> Payments: mark succeeded
+  Payments -> Broker: OrderConfirmed and PaymentSucceeded
+  Broker -> Workers: consume events
+else result code nonzero
+  Payments -> Payments: mark failed
+  Payments -> Broker: PaymentFailed
+  Broker -> Workers: consume failure
+end
+@enduml

@@ -1,0 +1,40 @@
+@startuml
+title SokoHub System Context
+
+actor Customer : "Shops, browses products, places orders, tracks shipments"
+actor Vendor : "Lists products, manages store, receives payouts, views analytics"
+rectangle "M-Pesa Daraja 3.0" : "M-Pesa STK Push, C2B, reconciliation callbacks" as mpesa
+rectangle "Stripe" : "International payment processing" as stripe
+rectangle "Courier Providers" : "Shipping rate quotes, tracking, delivery" as courier
+rectangle "ETIMS" : "Kenyan tax rate lookup" as etims
+rectangle "Nuxt 3 Frontend" : "SSR marketplace storefront, Pinia state" as frontend
+
+rectangle "SokoHub" : "Multi-vendor e-commerce marketplace for East Africa" as sokohub
+
+Customer --> sokohub : Browse, buy, pay, track
+Vendor --> sokohub : Manage store, products, payouts
+frontend --> sokohub : API calls
+sokohub --> mpesa : STK Push, callback
+sokohub --> stripe : Payment intent, webhook
+sokohub --> courier : Rate, label, tracking
+sokohub --> etims : Tax rate validation
+
+package "SokoHub Platform" {
+    component "SokoHub.Api" : ".NET 10 - Entry point, controllers, middleware, Scalar docs" as api
+    component "SokoHub.Identity" : ".NET 10 - JWT auth, RBAC, refresh tokens" as identity
+    component "SokoHub.Application" : ".NET 10 - CQRS handlers, DTOs, validation" as app
+    component "SokoHub.Domain" : ".NET 10 - Entities, aggregates, value objects, domain events" as domain
+    component "SokoHub.Infrastructure" : ".NET 10 - Persistence, messaging, external clients" as infra
+    component "SokoHub.Notifications" : ".NET 10 - Background worker for notifications" as notif
+    component "SokoHub.Reporting" : ".NET 10 - Analytics read model builder" as report
+    component "SokoHub.Workers" : ".NET 10 - Scheduled/long-running background jobs" as workers
+}
+
+identity --> app : Auth validation
+app --> domain : Uses
+infra --> app : Implements interfaces
+notif --> app : Consumes events
+report --> infra : Reads
+workers --> app : Triggers handlers
+
+@enduml

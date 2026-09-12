@@ -1,0 +1,32 @@
+@startuml
+title Checkout Flow
+actor Customer
+participant "Nuxt Frontend" as Frontend
+participant "SokoHub API" as Api
+participant "Cart" as Cart
+participant "Checkout" as Checkout
+participant "Inventory" as Inventory
+participant "Payment" as Payment
+participant "Orders" as Orders
+participant "RabbitMQ" as Broker
+participant "Notifications" as Notifications
+
+Customer -> Frontend: add items to cart
+Frontend -> Api: GET /api/cart
+Api -> Cart: load cart
+Cart --> Api: cart items
+Api --> Frontend: cart
+Customer -> Frontend: start checkout
+Frontend -> Api: POST /api/checkout
+Api -> Checkout: create checkout session
+Checkout -> Inventory: reserve items
+Inventory --> Checkout: reservations
+Checkout -> Payment: initiate payment
+Payment --> Checkout: payment intent
+Checkout -> Orders: place and split order
+Orders --> Checkout: order and vendor orders
+Checkout --> Api: checkout result
+Api --> Frontend: checkout response
+Payment -> Broker: PaymentInitiated
+Broker -> Notifications: notify customer
+@enduml

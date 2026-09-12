@@ -1,0 +1,74 @@
+@startuml
+title Finance ERD - Oracle
+
+entity LedgerAccount {
+  *Id uuid PK
+  AccountNumber string NN
+  Name string NN
+  AccountType string NN
+  Balance decimal NN
+}
+
+entity FinancialPeriod {
+  *Id uuid PK
+  PeriodName string NN
+  StartDate datetime NN
+  EndDate datetime NN
+  IsClosed bool NN
+}
+
+entity JournalEntry {
+  *Id uuid PK
+  Description string NN
+  Reference string NN
+  EntryDate datetime NN
+  FinancialPeriodId uuid FK
+}
+
+entity JournalEntryLine {
+  *Id uuid PK
+  JournalEntryId uuid FK NN
+  AccountId uuid FK NN
+  Amount Money NN
+  IsDebit bool NN
+}
+
+entity Settlement {
+  *Id uuid PK
+  VendorId uuid FK NN
+  TotalAmount Money NN
+  SettlementDate datetime NN
+  Reference string NN
+  IsProcessed bool NN
+}
+
+entity VendorPayout {
+  *Id uuid PK
+  VendorId uuid FK NN
+  Amount Money NN
+  MpesaReceiptNumber string
+  Status string NN
+  PayoutDate datetime NN
+}
+
+entity FinancialTransaction {
+  *Id uuid PK
+  AccountId uuid FK NN
+  Amount Money NN
+  TransactionDate datetime NN
+  Description string
+  RelatedTransactionId uuid
+}
+
+LedgerAccount --> JournalEntryLine : "(AccountId)\nnaming: Lines"
+FinancialPeriod --> JournalEntry : Entries
+JournalEntry --> JournalEntryLine : Lines
+VendorPayout --> Settlement : "(SettlementId)\nnaming: Settlement"
+FinancialTransaction --> LedgerAccount : AccountId
+JournalEntryLine --> JournalEntry : JournalEntryId
+JournalEntryLine --> LedgerAccount : AccountId
+JournalEntry --> FinancialPeriod : FinancialPeriodId
+VendorPayout --> Vendor : VendorId (from Vendor)
+FinancialTransaction --> LedgerAccount : AccountId
+
+@enduml

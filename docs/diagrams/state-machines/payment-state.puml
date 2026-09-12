@@ -1,0 +1,20 @@
+@startuml
+title Payment State Machine
+skinparam state {
+  BackgroundColor #E8F5E9
+  BorderColor #2E7D32
+}
+[*] --> Pending
+Pending --> Authorized : Card authorization
+Pending --> Succeeded : Wallet, COD, or direct capture
+Pending --> Failed : Initiation failed
+Pending --> Voided : Payment cancelled
+Authorized --> Succeeded : Capture
+Authorized --> Voided : Void authorization
+Succeeded --> PartiallyRefunded : Partial refund
+PartiallyRefunded --> Refunded : Remaining amount refunded
+Succeeded --> Refunded : Full refund
+Failed --> [*]
+Voided --> [*]
+Refunded --> [*]
+@enduml

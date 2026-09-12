@@ -1,0 +1,107 @@
+@startuml
+title SokoHub — M-Pesa Daraja Integration (STK Push + B2C + Reconciliation)
+
+actor "Customer\n(Frontend / Api)" as Customer
+cloud "Internet\n(HTTPS)" as Internet
+
+package "SokoHub.Api" {
+  boundary "PaymentsController\n/api/payments/initiate" as PayCtrl
+  boundary "MpesaController\n/api/payments/mpesa/stkpush\n[Authorize]" as StkCtrl
+  boundary "MpesaController\n/api/payments/mpesa/b2c/callback\n[AllowAnonymous]" as B2cCb
+}
+
+package "Application" {
+  control "InitiatePaymentHandler\n(InitiatePaymentCommand)" as InitH
+  control "HandleMpesaCallbackHandler\n(HandleMpesaCallbackCommand)" as CbH
+  control "RefundPaymentHandler" as RefundH
+  control "SubmitEtimsDocumentHandler" as EtimsH
+  queue "Background Queue\n(inbox/outbox)" as Queue
+}
+
+package "Infrastructure" {
+  control "MpesaService\n(IMpesaService)" as MpesaSvc
+  control "DarajaAuthClient\n(DarajaAuthenticationClient)" as AuthCli
+  control "StkQueryService\n(DarajaClient.Query)" as StkQuery
+  control "B2cService\n(DarajaClient.B2C)" as B2cSvc
+  control "MpesaReversalService\n(DarajaClient.Reverse)" as Reversal
+  control "MpesaTransaction\nStatusService" as TxStatus
+  database "Redis Cache\n(mpesa:checkout / receipt)" as Redis
+  database "MSSQL\nPayment/MpesaTransaction" as Db
+  database "MongoDB\nMpesaCallbackDocument" as Mongo
+}
+
+cloud "Safaricom Daraja API\n(sandbox/api.safaricom.co.ke)" as Daraja {
+  queue "OAuth2\n/oauth/v1/generate\n(client_credentials)" as OAuth2
+  queue "STK Push\n/mpesa/stkpush/v1/processrequest" as StkApi
+  queue "STK Query\n/mpesa/stkpush/v1/query" as QueryApi
+  queue "B2C Payment\n/mpesa/b2c/v1/paymentrequest" as B2cApi
+  queue "Reversal\n/mpesa/reversal" as RevApi
+}
+
+package "Background Workers" {
+  control "PaymentReconciliationJob" as ReconJob
+  control "PaymentTimeoutJob" as TimeoutJob
+}
+
+== STK Push (Initiate) ==
+Customer -> PayCtrl : POST /initiate\n(PaymentInitiateRequest\nmethod=Mpesa, phone, amount)
+PayCtrl -> InitH : InitiatePaymentCommand
+InitH -> Db : Order + Payment.Create()\n(MpesaStk, status=Pending)
+InitH -> MpesaSvc : InitiateStkPushAsync\n(phone, amount, order.Number)
+note right of MpesaSvc
+  password = base64(ShortCode +\nPasskey + timestamp)\nCheckoutRequestID stored\nin Redis:mpesa:checkout:{id}\n(10 min TTL)
+end note
+MpesaSvc -> AuthCli : GetAccessTokenAsync()\n(cache)
+AuthCli -> OAuth2 : GET /oauth/v1/generate\nbasic Auth\n(consumerKey:secret)
+OAuth2 --> AuthCli : access_token (cached, 55 min)
+AuthCli --> MpesaSvc : bearer token
+MpesaSvc -> StkApi : POST /processrequest\nbearer + STK payload\nCallbackURL = .../mpesa/callback
+StkApi --> MpesaSvc : DarajaStkPushResponse\n(CheckoutRequestID, MerchantRequestID)
+MpesaSvc --> InitH : response
+InitH -> Db : Payment.InitiateMpesaStk()\nstatus=Initiated\nRaise PaymentInitiatedEvent
+InitH -> Redis : SetAsync(mpesa:checkout:{id},\npaymentId, 10m)
+InitH --> PayCtrl : PaymentResponse
+PayCtrl --> Customer : 200 OK\n(CheckoutRequestID)
+
+== STK Callback ==
+Daraja --> B2cCb : HTTPS POST callback\n(DarajaCallbackPayload)
+note over B2cCb : See mpesa-callback-security.puml\n(IP allowlist + fast 200 + idempotency)
+B2cCb -> Queue : enqueue HandleMpesaCallbackCommand
+B2cCb --> Daraja : 200 OK (fast ACK)
+Queue -> CbH : HandleMpesaCallbackCommand
+CbH -> Redis : mpesa:receipt:{n} exists?\n(24h dedupe)
+CbH -> Db : Payment.ApplyCallback\n(resultCode==0 => Succeeded,\namount/currency match,\nduplicate-guard)
+CbH -> Mongo : persist raw callback\n(MpesaCallbackDocumentRepository)
+CbH -> Redis : SetAsync(mpesa:receipt:{n},\n24h)
+CbH -> Db : SaveChanges
+
+note over CbH,Db
+  PaymentSucceeded: Order.ConfirmPayment()\n+ Publish OrderConfirmed\n+ Publish PaymentSucceededIntegrationEvent
+end note
+
+== B2C Payout ==
+activate B2cSvc
+Customer -> StkCtrl : POST /b2c\n(vendor payout request)
+StkCtrl -> B2cSvc : InitiateB2CPayoutAsync\n(phone, amount, remarks, occasion)
+B2cSvc -> AuthCli : GetAccessTokenAsync()
+AuthCli --> B2cSvc : token
+B2cSvc -> B2cApi : POST /b2c/v1/paymentrequest\n(InitiatorName, SecurityCredential,\nCommandID=BusinessPayment,\nPartyA=B2CShortCode, PartyB=phone)
+B2cApi --> B2cSvc : DarajaB2CResponse\n(ConversationID)
+B2cSvc --> StkCtrl : response
+B2cCb -> B2cSvc : POST /b2c/callback\nresult\n(persist only)
+B2cCb --> Daraja : 200 OK
+deactivate B2cSvc
+
+== Query (no callback) ==
+TimeoutJob -> StkQuery : pending CheckoutRequestID > 90s
+StkQuery -> QueryApi : GET /query?CheckoutRequestID=...\nbearer token
+QueryApi --> StkQuery : terminal status
+StkQuery -> CbH : reconcile / flag mismatch
+
+== Daily Reconciliation ==
+ReconJob -> Db : SELECT local payments\nvs MpesaReceiptNumber
+ReconJob -> OAuth2 : GetAccessToken
+ReconJob -> Daraja : /mpesa/transaction-status\ndaily statement
+ReconJob -> Db : settle / flag mismatch
+
+@enduml

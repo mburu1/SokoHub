@@ -1,0 +1,132 @@
+@startuml
+title Observability Stack
+
+!theme plain
+skinparam rectangle {
+  BackgroundColor #dae8fc
+  BorderColor #666666
+}
+skinparam rectangle {
+  BackgroundColor<<telem>> #dae8fc
+  BackgroundColor<<collect>> #fff2cc
+  BackgroundColor<<storage>> #d5e8d4
+  BackgroundColor<<alert>> #f8cecc
+}
+
+title Observability: Logging, Metrics, Tracing, Health
+
+package "Application Instrumentation" <<telem>> #dae8fc {
+  node "LoggingConfiguration\n(structured JSON)" as LOGGING
+  node "AuditLogging\n(immutability)" as AUDIT_LOG
+  node "ApplicationMetrics\n(request count,\nduration, errors)" as APP_METRICS
+  node "BusinessMetrics\n(GMV, orders,\nconversion rate)" as BIZ_METRICS
+  node "PaymentMetrics\n(STK success rate,\nrefund rate)" as PAY_METRICS
+  node "TracingConfiguration\n(OpenTelemetry SDK)" as TRACING
+  node "CorrelationActivity\n(CorrelationIdMiddleware)" as CORRELATION
+}
+
+package "Health Checks\n(API layer)" <<alert>> #f8cecc {
+  node "DatabaseHealthCheck\n(MSSQL connectivity)" as HC_DB
+  node "MessagingHealthCheck\n(RabbitMQ + Kafka)" as HC_MQ
+  node "RedisHealthCheck\n(Redis connectivity)" as HC_REDIS
+  node "ExternalDependenciesHealthCheck\n(M-Pesa, Stripe,\nFlutterwave, ETI MS)" as HC_EXT
+}
+
+package "OpenTelemetry SDK\n(ServiceDefaults)" <<telem>> #dae8fc {
+  node "AddOpenTelemetry()\n(.NET auto-instrumentation)"
+  node "OTLP Exporter\n(OtlpCollector endpoint)"
+}
+
+package "Collection & Processing" <<collect>> #fff2cc {
+  node "OTLP Collector\n(receive + batch +\nfilter + route)" as OTLP
+  node "Prometheus\n(scrape metrics)" as PROM
+  node "Loki\n(ingest logs)" as LOKI
+  node "Tempo\n(collect traces)" as TEMPO
+  node "Grafana\n(dashboards + alerts)" as GRAFANA
+}
+
+package "Storage & Alerting" <<storage>> #d5e8d4 {
+  database "Prometheus TSDB\n(15d retention)" as PROM_TSDB
+  database "Loki\n(chunk store)" as LOKI_STORE
+  database "Tempo\n(trace storage)" as TEMPO_STORE
+  node "Alertmanager\n(routing + silencing)" as ALERTMANAGER
+}
+
+package "K8s Probes" <<alert>> #f8cecc {
+  node "Liveness Probe\n(/health/live)" as PROBE_LIVE
+  node "Readiness Probe\n(/health/ready)" as PROBE_READY
+}
+
+' Application instrumentation -> OTLP
+LOGGING --> OTLP
+AUDIT_LOG --> OTLP
+APP_METRICS --> OTLP
+BIZ_METRICS --> OTLP
+PAY_METRICS --> OTLP
+TRACING --> OTLP
+CORRELATION --> OTLP
+
+' Health checks -> k8s probes
+HC_DB --> PROBE_READY
+HC_MQ --> PROBE_READY
+HC_REDIS --> PROBE_READY
+HC_EXT --> PROBE_READY
+
+PROBE_LIVE -[#red,dashed]-> OTLP : "failure metric"
+PROBE_READY -[#red,dashed]-> OTLP : "failure metric"
+
+' OTLP flow
+OTLP --> PROM : "metrics (Prometheus format)"
+OTLP --> LOKI : "logs (json)"
+OTLP --> TEMPO : "traces (otlp)"
+
+' Storage
+PROM --> PROM_TSDB
+LOKI --> LOKI_STORE
+TEMPO --> TEMPO_STORE
+
+' Alerting
+PROM_TSDB --> ALERTMANAGER
+ALERTMANAGER --> GRAFANA
+
+' Dashboards
+GRAFANA --> PROM_TSDB : "query"
+GRAFANA --> LOKI_STORE : "query"
+GRAFANA --> TEMPO_STORE : "query"
+
+note right of LOGGING
+  <b>Logging</b>:\n- Serilog JSON output\n- Structured fields:\n  CorrelationId, UserId,\n  RequestId, TraceId\n- AuditLogging: immutable\n  audit trail
+end note
+
+note right of APP_METRICS
+  <b>Metrics:</b>\n- http_requests_total\n- http_request_duration_seconds\n- http_requests_failed_total\n- db_query_duration_seconds\n- Custom counters via\n  ApplicationMetrics class
+end note
+
+note right of BIZ_METRICS
+  <b>Business Metrics:</b>\n- orders_total\n- order_value_gmv\n- cart_abandonment_rate\n- conversion_rate\n- vendor_revenue\nvia BusinessMetrics class
+end note
+
+note right of PAY_METRICS
+  <b>Payment Metrics:</b>\n- mpesa_stk_success_rate\n- card_payment_success_rate\n- payment_duration_seconds\n- refund_rate\n- payout_pending_count\nvia PaymentMetrics class
+end note
+
+note right of CORRELATION
+  <b>Correlation:</b>\n- CorrelationIdMiddleware\n  generates request-scoped ID\n- CorrelationActivity\n  enriches traces\n- Propagated via:\n  HTTP headers (traceparent)\n  RabbitMQ headers\n  Kafka headers\n  RabbitMQ message headers
+end note
+
+note right of OTLP
+  <b>OTLP Collector Pipeline:</b>\n1. Receivers: otlp, prometheus\n2. Processors: batch, memory_limiter,\n   attributes (add service.name)\n3. Exporters: prometheus,\n   loki, tempo\nvia OpenTelemetryConfiguration\n(ServicesDefaults shared config)
+end note
+
+note bottom of node "Storage & Alerting"
+  <b>Alerting Rules:</b>\n- API 5xx > 5% in 5 min →\n  PagerDuty + Slack\n- Payment failure rate > 10% →\n  immediate\n- Kafka consumer lag > 10k →\n  Slack warning\n- RabbitMQ queue depth > 10k →\n  alert\n- DB connection pool > 90% →\n  alert\n- SLO: 99.9% API availability,\n  99.5% payment success rate
+end note
+
+legend right
+  |<#dae8fc>| Instrumentation (in-app) |
+  |<#fff2cc>| Collector / Processing |
+  |<#d5e8d4>| Storage |
+  |<#f8cecc>| Alerting / Probes |
+endlegend
+
+@enduml

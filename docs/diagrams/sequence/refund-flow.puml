@@ -1,0 +1,41 @@
+@startuml
+title Refund and Reverse Payment Flow
+actor "Customer / Admin" as Actor
+participant "Nuxt Frontend" as Frontend
+participant "SokoHub API" as Api
+participant "RefundPaymentHandler" as Handler
+participant "RefundSaga" as Saga
+participant "Payment" as Payment
+participant "Wallet" as Wallet
+participant "MpesaService" as Mpesa
+participant "Daraja / Card Provider" as Provider
+participant "EventBus" as EventBus
+participant "RabbitMQ" as Broker
+participant "Notifications" as Notifications
+
+Actor -> Frontend: POST /api/payments/{id}/refund\n(amount, reason)
+Frontend -> Api: RefundPaymentCommand
+Api -> Handler: send command
+Handler -> Payment: load aggregate
+alt payment is not refundable
+  Payment --> Handler: validation error
+  Handler --> Api: refund_failed
+  Api --> Frontend: error response
+else payment succeeded or partially refunded
+  Payment -> Payment: Refund(amount, reason)
+  Payment --> Handler: PaymentRefundedEvent
+  Handler -> Saga: coordinate provider reversal
+  alt wallet payment
+    Saga -> Wallet: credit vendor or customer wallet
+  else M-Pesa or card payment
+    Saga -> Mpesa: reverse or refund
+    Mpesa -> Provider: reversal / refund API
+    Provider --> Mpesa: provider reference
+  end
+  Handler -> EventBus: publish PaymentRefundedIntegrationEvent
+  EventBus -> Broker: persist and route event
+  Broker -> Notifications: send refund receipt
+  Handler --> Api: success
+  Api --> Frontend: refund accepted
+end
+@enduml

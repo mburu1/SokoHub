@@ -1,0 +1,54 @@
+@startuml
+title Order Confirmation Flow
+actor Customer
+participant "Nuxt Frontend" as Frontend
+participant "SokoHub API" as Api
+participant "Payments" as Payments
+participant "Orders" as Orders
+database "MSSQL" as Store
+participant "RabbitMQ" as Broker
+participant "Workers" as Workers
+participant "Notifications" as Notifications
+participant "Shipping" as Shipping
+
+Customer -> Frontend: complete payment
+Frontend -> Api: payment callback
+Api -> Payments: HandleMpesaCallback
+Payments -> Store: load Payment
+Payments -> Store: load Order
+Payments -> Store: apply callback
+
+alt result code 0 (success)
+  Payments -> Store: mark payment succeeded
+  Payments -> Store: confirm order
+  Payments -> Broker: publish OrderConfirmed
+  Payments -> Broker: publish PaymentSucceeded
+  Broker -> Workers: deliver events
+  Workers -> Orders: consume OrderConfirmed
+  Orders -> Store: update order status to Confirmed
+  Workers -> Notifications: send order confirmation
+  Notifications -> Customer: email / SMS confirmation
+  Workers -> Shipping: create shipment
+  Shipping -> Store: persist shipment
+  Shipping --> Workers: tracking number
+  Workers -> Notifications: send tracking update
+  Workers -> Orders: consume PaymentSucceeded
+  Orders -> Store: trigger vendor split / payout
+  Orders --> Workers: split complete
+  Workers -> Notifications: notify vendors
+  Orders -> Store: mark order confirmed
+  Orders --> Api: confirmation result
+  Api --> Frontend: order confirmed
+  Frontend -> Customer: show confirmation screen
+else result code nonzero (failure)
+  Payments -> Store: mark payment failed
+  Payments -> Broker: publish PaymentFailed
+  Broker -> Workers: consume failure
+  Workers -> Orders: cancel order
+  Orders -> Store: mark order cancelled
+  Workers -> Notifications: notify customer of failure
+  Orders --> Api: cancellation result
+  Api --> Frontend: order cancelled
+  Frontend -> Customer: show retry / cancel options
+end
+@enduml

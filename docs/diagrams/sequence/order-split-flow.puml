@@ -1,10 +1,28 @@
 @startuml
 title Multi-vendor Order Split
-participant Checkout
-participant OrderSplitSaga
-participant Orders
-participant Inventory
-Checkout -> OrderSplitSaga: cart confirmed
-OrderSplitSaga -> Inventory: reserve per vendor
-OrderSplitSaga -> Orders: create sub-orders
+participant "Checkout" as Checkout
+participant "OrderSplitSaga" as Saga
+participant "Orders" as Orders
+participant "Inventory" as Inventory
+participant "Vendors" as Vendors
+participant "RabbitMQ" as Broker
+
+Checkout -> Saga: cart confirmed
+Saga -> Inventory: reserve stock per vendor
+Inventory --> Saga: reservations accepted
+Saga -> Orders: create parent order
+Orders -> Orders: group items by VendorId
+Orders -> Orders: create VendorOrder per vendor
+Orders --> Saga: parent order and vendor orders
+Saga -> Vendors: notify vendors
+Vendors --> Saga: acceptance pending
+Saga -> Broker: publish OrderCreated
+Broker --> Saga: event persisted
+alt any reservation fails
+  Saga -> Inventory: release reservations
+  Saga -> Orders: cancel parent order
+  Saga --> Checkout: checkout failed
+else all reservations succeed
+  Saga --> Checkout: order split complete
+end
 @enduml

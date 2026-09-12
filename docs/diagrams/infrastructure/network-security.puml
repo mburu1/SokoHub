@@ -1,0 +1,140 @@
+@startuml
+title Network Security Architecture
+
+!theme plain
+skinparam rectangle {
+  BackgroundColor #dae8fc
+  BorderColor #666666
+}
+skinparam rectangle {
+  BackgroundColor<<internet>> #f5f5f5
+  BackgroundColor<<vpc>> #dae8fc
+  BackgroundColor<<subnet>> #fff2cc
+  BackgroundColor<<nsg>> #d5e8d4
+  BackgroundColor<<private>> #f8cecc
+}
+
+title Network Security: VPC, WAF, Private Endpoints, Security Layers
+
+node "Internet" <<internet>> #f5f5f5 {
+  [Customer\nBrowser]
+  [M-Pesa Daraja\n(Safaricom IPs)]
+  [Stripe / Flutterwave]
+  [ETI MS\n(Kenya Revenue)]
+}
+
+node "CDN & Edge" {
+  [CloudFront / Front Door]
+  [WAF\n(managed rules + OWASP)]
+}
+
+node "VPC (Region A)" <<vpc>> #dae8fc {
+
+  package "Public Subnet (AZ1,AZ2,AZ3)" <<subnet>> #fff2cc {
+    [Bastion Host\n(Jump box)]
+    [Ingress LB\n(TLS 443)]
+    [Public IP\n(Webhook endpoint)]
+  }
+
+  package "Private Subnet — Web Tier" <<subnet>> #fff2cc {
+    node "api-ingress\n(Nginx/Traefik)" <<nsg>> #d5e8d4 {
+    }
+  }
+
+  package "Private Subnet — App Tier (AZ1,AZ2,AZ3)" <<subnet>> #fff2cc {
+    [SokoHub.Api Pods\n(ReplicaSet)]
+    [SokoHub.Workers Pods]
+    [SokoHub.Notifications Pods]
+    [SokoHub.Reporting Pods]
+    [Frontend Pods\n(Nuxt Nitro)]
+  }
+
+  package "Private Subnet — Data Tier" <<subnet>> #fff2cc {
+    node "NSG: Data Tier\n(No public access)" <<nsg>> #d5e8d4 {
+    }
+    [MSSQL\n(private endpoint)] <<private>>
+    [PostgreSQL\n(private endpoint)] <<private>>
+    [MySQL\n(private endpoint)] <<private>>
+    [MongoDB\n(private endpoint)] <<private>>
+    [Oracle\n(private endpoint)] <<private>>
+    [Redis\n(private endpoint)] <<private>>
+    [OpenSearch\n(private endpoint)] <<private>>
+    [RabbitMQ\n(private, internal)] <<private>>
+    [Kafka\n(private, internal)] <<private>>
+  }
+
+  package "Private Subnet — Messaging Tier" <<subnet>> #fff2cc {
+    [RabbitMQ Cluster\n(3 nodes)]
+    [Kafka Brokers\n(3 brokers + ZK)]
+  }
+
+  node "Private DNS\n(VPC resolution)" <<nsg>> #d5e8d4 {
+  }
+}
+
+node "Key Vault" <<subnet>> #fff2cc {
+  [Azure Key Vault / AWS Secrets Manager]
+}
+
+' Edge -> VPC
+[Customer\nBrowser] --> [CloudFront / Front Door]
+[CloudFront / Front Door] --> [WAF\n(managed rules + OWASP)]
+[WAF] -down-> [Ingress LB\n(TLS 443)]
+
+[M-Pesa Daraja\n(Safaricom IPs)] -right-> [Public IP\n(Webhook endpoint)]
+[Stripe / Flutterwave] -down-> [Ingress LB\n(TLS 443)]
+[ETI MS\n(Kenya Revenue)] -down-> [Ingress LB\n(TLS 443)]
+
+' VPC internal
+[Ingress LB\n(TLS 443)] --> [api-ingress\n(Nginx/Traefik)]
+[api-ingress\n(Nginx/Traefik)] --> [SokoHub.Api Pods\n(ReplicaSet)]
+
+[SokoHub.Api Pods\n(ReplicaSet)] --> [MSSQL\n(private endpoint)]
+[SokoHub.Api Pods\n(ReplicaSet)] --> [Redis\n(private endpoint)]
+[SokoHub.Api Pods\n(ReplicaSet)] --> [RabbitMQ Cluster\n(3 nodes)]
+[SokoHub.Api Pods\n(ReplicaSet)] --> [Kafka Brokers\n(3 brokers + ZK)]
+
+[SokoHub.Workers Pods] --> [RabbitMQ Cluster\n(3 nodes)]
+[SokoHub.Workers Pods] --> [Kafka Brokers\n(3 brokers + ZK)]
+[SokoHub.Workers Pods] --> [MSSQL\n(private endpoint)]
+[SokoHub.Workers Pods] --> [Redis\n(private endpoint)]
+
+[SokoHub.Reporting Pods] --> [PostgreSQL\n(private endpoint)]
+
+[Public IP\n(Webhook endpoint)] -[#red,dashed,thickness=2]-> [SokoHub.Api Pods\n(ReplicaSet)] : "M-Pesa callback\n(Safaricom IP allowlist)"
+
+' Secrets
+[Key Vault] .[#grey,dotted]-> [SokoHub.Api Pods\n(ReplicaSet)]
+[Key Vault] .[#grey,dotted]-> [SokoHub.Workers Pods]
+
+note right of [WAF\n(managed rules + OWASP)]
+  <b>WAF Rules:</b>
+  - OWASP Top 10 protection
+  - SQL injection blocking
+  - XSS protection
+  - Rate-based rules (per IP)
+  - Bot control (login/brute-force)
+end note
+
+note right of [Public IP\n(Webhook endpoint)]
+  <b>M-Pesa Webhook Security:</b>
+  - Dedicated public IP / path\n  - DarajaIpAllowlistMiddleware\n  - Safaricom IP range allowlist\n  - Immediate 200 OK response\n  - Callback queued to Outbox\n  - Idempotent on CheckoutRequestID
+end note
+
+note right of "NSG: Data Tier\n(No public access)"
+  <b>Data Tier NSG Rules:</b>\n  - Allow: App tier → data ports only\n  - Allow: Messaging tier ↔ databases\n  - Deny: Internet → data tier\n  - Deny: Web tier → data tier (except Redis/MSSQL)
+end note
+
+note bottom of node "VPC (Region A)"
+  <b>Network Security Layers:</b>\n1. WAF at edge (OWASP rules)\n2. TLS 1.3 termination at LB\n3. NSGs per subnet tier\n4. Private endpoints for all databases\n5. CIDR: 10.0.0.0/16 (VPC),\n   10.0.1.0/24 (web), 10.0.2.0/24 (data),\n   10.0.3.0/24 (messaging)\n6. Azure Private DNS / AWS PrivateLink\n7. Secrets in Key Vault (no env vars for secrets)
+end note
+
+legend right
+  |<#f5f5f5>| Internet / External |
+  |<#dae8fc>| VPC / Kubernetes |
+  |<#fff2cc>| Private Subnet |
+  |<#d5e8d4>| NSG / Network Policy |
+  |<#f8cecc>| Private Endpoint |
+endlegend
+
+@enduml

@@ -1,0 +1,86 @@
+@startuml
+title Shipping ERD - MSSQL
+
+entity Courier {
+  *Id uuid PK
+  Name string NN
+  Code string NN
+  ApiKey string NN
+  ApiSecret string NN
+  IsActive bool NN
+}
+
+entity Shipment {
+  *Id uuid PK
+  OrderId uuid FK NN
+  VendorId uuid FK NN
+  CourierId uuid FK NN
+  Origin Address NN
+  Destination Address NN
+  Cost Money NN
+  Status ShipmentStatus NN
+  TrackingNumber string
+  ShippedAt datetimeoffset
+  DeliveredAt datetimeoffset
+}
+
+entity ShipmentItem {
+  *Id uuid PK
+  ShipmentId uuid FK NN
+  OrderItemId uuid FK NN
+  Quantity int NN
+}
+
+entity TrackingEvent {
+  *Id uuid PK
+  ShipmentId uuid FK NN
+  Status ShipmentStatus NN
+  Description string
+  Location string
+  CreatedAt datetimeoffset NN
+}
+
+entity DeliveryAttempt {
+  *Id uuid PK
+  ShipmentId uuid FK NN
+  AttemptedAt datetimeoffset NN
+  Result string NN
+  CarrierNotes string
+}
+
+entity ShippingMethod {
+  *Id uuid PK
+  Name string NN
+  Carrier string NN
+  IsActive bool NN
+}
+
+entity ShippingRate {
+  *Id uuid PK
+  ShippingMethodId uuid FK NN
+  OriginRegion string NN
+  DestinationRegion string NN
+  BaseCost Money NN
+  PerKmCost Money
+}
+
+entity ShippingAddress {
+  *Id uuid PK
+  OrderId uuid FK NN
+  Address Address NN
+  IsVerified bool NN
+}
+
+Shipment --> Courier : CourierId
+Shipment --> ShipmentItem : Items
+Shipment --> TrackingEvent : Events
+Shipment --> DeliveryAttempt : Attempts
+Shipment --> ShippingAddress : Address
+Shipment --> Order : OrderId
+Shipment --> Vendor : VendorId (from Vendor)
+ShipmentItem --> Shipment : ShipmentId
+TrackingEvent --> Shipment : ShipmentId
+DeliveryAttempt --> Shipment : ShipmentId
+ShippingRate --> ShippingMethod : ShippingMethodId
+
+@enduml

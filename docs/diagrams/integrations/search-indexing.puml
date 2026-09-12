@@ -1,0 +1,87 @@
+@startuml
+title SokoHub — Search Indexing & Query (OpenSearch)
+
+skinparam componentStyle rectangle
+skinparam arrowColor #2E7D32
+
+package "SokoHub.Api" {
+  boundary "SearchController\n/api/search\n[Authorize]" as SearchCtrl
+  control "CatalogController\n(CRUD products)\ntriggers index" as CatCtrl
+}
+
+package "Application" {
+  control "SearchIndexingJob\n(Enqueue changed product)" as IndexJob
+  control "SearchRebuildJob\n(full reindex)" as RebuildJob
+  control "ProductCreated/Updated/\nDeleted Integration Events" as ProdEvents
+}
+
+package "Infrastructure" {
+  component "SearchService\n(catalog write model)" as SearchSvc
+  component "SearchIndexer\n(write index)" as Indexer
+  component "SearchQueryService\n(read/facet)" as QuerySvc
+  component "OpenSearchClient\n(OpenSearch SDK)" as OsClient
+  database "OpenSearch\n(product index)" as OsIndex
+  database "Redis\n(SearchCache\nresult cache only)" as Redis
+  database "MSSQL\n(Product, Variant,\nBrand, Category, Attr)" as Sql
+  database "MongoDB\n(Audit Trail)" as Audit
+}
+
+control "RabbitMQ\n(IntegrationEventBus)" as Rabbit
+control "Kafka\n(AuditEventProducer)" as Kafka
+
+note right of OpenSearchClient
+  ADR-011: OpenSearch for\nfaceted catalog search\n(Meilisearch for local).\nRedis used as *result\ncache only — NOT\nthe index store.
+end note
+
+note right of OsIndex
+  Document = Product:\n- title, brand, category\n- attributes, variants\n- price, stock, rating\nNo PII stored in index.
+end note
+
+== Write / Index Path ==
+CatCtrl -> Sql : Product CRUD\n(MSSQL)
+CatCtrl -> ProdEvents : Publish\nProductCreated/Updated/Deleted
+ProdEvents -> Rabbit
+Rabbit -> IndexJob : enqueue\n(ProductCreatedEvent)
+activate IndexJob
+IndexJob -> SearchSvc : get product\nread model
+SearchSvc -> Sql : query Product/Variant/Brand/Category
+Sql --> SearchSvc : denormalized doc
+SearchSvc -> Indexer : IndexAsync(doc)
+Indexer -> OsClient : IndexDocument\n(POST _doc)\n(HTTPS)
+OsClient -> OsIndex : upsert into\n`products` index
+Indexer --> SearchSvc : indexed
+SearchSvc -> Audit : log index op
+SearchSvc --> IndexJob : done
+IndexJob -> Kafka : publish SearchIndexEvent\n(audit stream)
+deactivate IndexJob
+
+note over IndexJob,OsIndex
+  Failures → dead-letter queue\n→ SearchIndexingWorker\nretries with backoff.\nSearchRebuildJob =\nfull reindex sweep.
+end note
+
+== Read / Query Path ==
+SearchCtrl -> QuerySvc : SearchAsync(\nquery, filters,\nfacets, page)
+QuerySvc -> Redis : cache hit?\nkey: search:q:{hash}
+alt cache hit
+  Redis --> QuerySvc : cached results
+else cache miss
+  QuerySvc -> OsClient : SearchAsync\n(GET _search)\nfaceted query +\naggregations
+  OsClient -> OsIndex : query DSL + filters
+  OsIndex --> OsClient : hits + facets
+  OsClient --> QuerySvc : results
+  QuerySvc -> Redis : SetAsync(\nsearch:q:{hash},\nresults, 5m)
+end
+QuerySvc --> SearchCtrl : paged results\n(hits + facets)
+SearchCtrl --> "Frontend (Nuxt)" : JSON
+
+== Rebuild Path (maintenance) ==
+RebuildJob -> SearchSvc : RebuildAllAsync()
+SearchSvc -> Sql : full Product scan
+Sql --> SearchSvc : all products
+SearchSvc -> OsClient : BulkIndex\n(_bulk API)
+OsClient -> OsIndex : recreate\n`products` index
+OsClient --> SearchSvc : ok
+SearchSvc -> Redis : Invalidate\nsearch:* keys
+note right of RebuildJob : Scheduled (off-peak)\nzero-downtime via\nindex alias swap.
+
+@enduml

@@ -1,0 +1,74 @@
+@startuml
+title Vendor ERD - MSSQL
+
+entity Vendor {
+  *Id uuid PK
+  UserId uuid FK NN
+  BusinessName string NN
+  TaxId KraPin NN
+  CommissionRate Percentage NN
+  Status VendorStatus NN
+  CreatedAt datetimeoffset NN
+}
+
+entity VendorStore {
+  *Id uuid PK
+  VendorId uuid FK NN
+  StoreName string NN
+  Description string
+  LogoUrl string
+  BannerUrl string
+  IsActive bool NN
+}
+
+entity VendorKyc {
+  *Id uuid PK
+  VendorId uuid FK NN
+  Status VendorStatus NN
+  SubmittedAt datetimeoffset NN
+  VerifiedAt datetimeoffset
+  VerifiedBy string
+  RejectionReason string
+}
+
+entity VendorDocument {
+  *Id uuid PK
+  VendorId uuid FK NN
+  DocumentType string NN
+  DocumentUrl string NN
+  Checksum string NN
+  UploadedAt datetimeoffset NN
+}
+
+entity VendorWallet {
+  *Id uuid PK
+  VendorId uuid FK NN
+  MpesaPhoneNumber string NN
+  Balance Money NN
+  Currency string NN
+}
+
+entity VendorCommission {
+  *Id uuid PK
+  VendorId uuid FK NN
+  Rate Percentage NN
+  EffectiveFrom datetimeoffset NN
+}
+
+entity VendorSettlement {
+  *Id uuid PK
+  VendorId uuid FK NN
+  Period string NN
+  Amount Money NN
+  Status string NN
+}
+
+Vendor --> VendorStore : Stores
+Vendor --> VendorKyc : Kyc
+Vendor --> VendorDocument : Documents
+Vendor --> VendorWallet : Wallet
+Vendor --> VendorCommission : Commissions
+Vendor --> VendorSettlement : Settlements
+Vendor --> User : UserId (FK from Identity)
+
+@enduml

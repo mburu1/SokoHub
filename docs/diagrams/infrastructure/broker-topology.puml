@@ -1,0 +1,115 @@
+@startuml
+title Broker Topology: RabbitMQ & Kafka
+
+!theme plain
+skinparam rectangle {
+  BackgroundColor<<exchange>> #d5e8d4
+  BackgroundColor<<queue>> #dae8fc
+  BackgroundColor<<topic>> #fff2cc
+  BackgroundColor<<dqx>> #f8cecc
+}
+
+title Broker Topology: RabbitMQ & Kafka
+
+partition "RabbitMQ" {
+  node "sokohub.events\ntopic exchange\n(durable)" <<exchange>> #d5e8d4 {
+  }
+
+  cloud "Dead-Letter\nExchange\nsokohub.events.dlx" <<dqx>> #f8cecc
+
+  package "Queues" {
+    queue "worker.order.events\n(routing: *Order*IntegrationEvent)\nOrderCreated, OrderConfirmed,\nOrderShipped, OrderDelivered,\nOrderCancelled" as Q_Order <<queue>> <<queue>> #dae8fc
+    queue "worker.payment.events\n(routing: *Payment*IntegrationEvent)\nPaymentInitiated,\nPaymentSucceeded,\nPaymentFailed,\nPaymentRefunded" as Q_Payment <<queue>> #dae8fc
+    queue "worker.inventory.events\n(routing: *Inventory*IntegrationEvent)\nInventoryReserved,\nInventoryReleased,\nInventoryAdjusted" as Q_Inventory <<queue>> #dae8fc
+    queue "worker.vendor.events\n(routing: *Vendor*IntegrationEvent)\nVendorRegistered,\nVendorApproved" as Q_Vendor <<queue>> #dae8fc
+    queue "worker.customer.events\n(routing: *Customer*IntegrationEvent)\nCustomerRegistered,\nCustomerVerified" as Q_Customer <<queue>> #dae8fc
+    queue "notification.dispatch\n(routing: OrderConfirmed,\nPaymentFailed,\nOrderShipped)" as Q_Notif <<queue>> #dae8fc
+    queue "sokohub.events.dlq\n(dead-letter)" as Q_DLQ <<dqx>> #f8cecc
+  }
+}
+
+partition "Kafka" {
+  node "payment.events\n(3 partitions,\nRF=3)" <<topic>> #fff2cc {
+  }
+  node "audit.events\n(3 partitions,\nRF=3)" <<topic>> #fff2cc {
+  }
+  node "analytics.events\n(3 partitions,\nRF=3)" <<topic>> #fff2cc {
+  }
+  node "payment.events.dlq\n(dead-letter)" <<topic>> #f8cecc {
+  }
+}
+
+' RabbitMQ exchange -> queues
+"sokohub.events\ntopic exchange\n(durable)" -down-> Q_Order : "OrderCreatedIntegrationEvent\nOrderConfirmedIntegrationEvent\nOrderShippedIntegrationEvent\nOrderDeliveredIntegrationEvent\nOrderCancelledIntegrationEvent"
+"sokohub.events\ntopic exchange\n(durable)" -down-> Q_Payment : "PaymentInitiatedIntegrationEvent\nPaymentSucceededIntegrationEvent\nPaymentFailedIntegrationEvent\nPaymentRefundedIntegrationEvent"
+"sokohub.events\ntopic exchange\n(durable)" -down-> Q_Inventory : "InventoryReservedIntegrationEvent\nInventoryReleasedIntegrationEvent\nInventoryAdjustedIntegrationEvent"
+"sokohub.events\ntopic exchange\n(durable)" -down-> Q_Vendor : "VendorRegisteredIntegrationEvent\nVendorApprovedIntegrationEvent"
+"sokohub.events\ntopic exchange\n(durable)" -down-> Q_Customer : "CustomerRegisteredIntegrationEvent\nCustomerVerifiedIntegrationEvent"
+"sokohub.events\ntopic exchange\n(durable)" -down-> Q_Notif : "OrderConfirmedIntegrationEvent\nPaymentFailedIntegrationEvent\nOrderShippedIntegrationEvent"
+
+' RabbitMQ DLX
+Q_Order -[#red,dashed]-> "Dead-Letter\nExchange\nsokohub.events.dlx"
+Q_Payment -[#red,dashed]-> "Dead-Letter\nExchange\nsokohub.events.dlx"
+Q_Inventory -[#red,dashed]-> "Dead-Letter\nExchange\nsokohub.events.dlx"
+Q_Vendor -[#red,dashed]-> "Dead-Letter\nExchange\nsokohub.events.dlx"
+Q_Customer -[#red,dashed]-> "Dead-Letter\nExchange\nsokohub.events.dlx"
+Q_Notif -[#red,dashed]-> "Dead-Letter\nExchange\nsokohub.events.dlx"
+"Dead-Letter\nExchange\nsokohub.events.dlx" -[#red,dashed]-> Q_DLQ
+
+' Kafka topics -> consumers
+node "PaymentEventProducer\n(Workers)" as K_Producer
+node "AuditEventProducer\n(Api)" as K_AuditProd
+node "AnalyticsEventProducer\n(Workers)" as K_AnalyticsProd
+
+K_Producer -down-> "payment.events\n(3 partitions,\nRF=3)" : "produce"
+K_AuditProd -down-> "audit.events\n(3 partitions,\nRF=3)" : "produce"
+K_AnalyticsProd -down-> "analytics.events\n(3 partitions,\nRF=3)" : "produce"
+
+node "PaymentEventConsumer\n(Workers)" as K_PaymentConsumer
+node "AuditEventConsumer\n(Workers)" as K_AuditConsumer
+node "AnalyticsEventConsumer\n(Workers)" as K_AnalyticsConsumer
+
+"payment.events\n(3 partitions,\nRF=3)" -down-> K_PaymentConsumer : "consume"
+"audit.events\n(3 partitions,\nRF=3)" -down-> K_AuditConsumer : "consume"
+"analytics.events\n(3 partitions,\nRF=3)" -down-> K_AnalyticsConsumer : "consume"
+
+' Kafka DLQ
+K_PaymentConsumer -[#red,dashed]-> "payment.events.dlq\n(dead-letter)"
+
+' Consumers
+node "OrderEventConsumer\n(Workers)" as C_Order
+node "PaymentEventConsumer\n(Workers)" as C_Payment
+node "NotificationEventConsumer\n(Workers)" as C_Notif
+node "InventoryEventConsumer\n(Workers)" as C_Inv
+node "VendorEventConsumer\n(Workers)" as C_Vendor
+node "NotificationDispatcher\n(Notifications)" as C_NotifDisp
+node "PaymentReconciliationWorker\n(Workers)" as C_Recon
+node "SearchIndexingWorker\n(Workers)" as C_Search
+
+Q_Order --> C_Order
+Q_Payment --> C_Payment
+Q_Payment --> C_Recon
+Q_Notif --> C_Notif
+Q_Notif --> C_NotifDisp
+Q_Inventory --> C_Inv
+Q_Vendor --> C_Vendor
+Q_Customer --> C_Recon
+
+note right of "sokohub.events\ntopic exchange\n(durable)"
+  <b>RabbitMQ Bus</b> (RabbitMqBus)
+  Exchange type: topic
+  Durable: true, Auto-delete: false
+  Routing key = event type name
+  Persistent messages
+  Publisher confirms enabled
+end note
+
+note right of "payment.events\n(3 partitions,\nRF=3)"
+  <b>Kafka</b>
+  Replication factor: 3
+  Partitions: 3 (scale with load)
+  Retention: 7 days
+  Compression: LZ4
+end note
+
+@enduml

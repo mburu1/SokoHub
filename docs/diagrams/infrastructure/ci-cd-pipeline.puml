@@ -1,0 +1,110 @@
+@startuml
+title CI/CD Pipeline
+
+!theme plain
+skinparam rectangle {
+  BackgroundColor #dae8fc
+  BorderColor #666666
+}
+
+title CI/CD Pipeline — SokoHub
+
+node "GitHub" {
+  [GitHub Repo\n(source code + IaC)]
+  (on: push / PR)
+}
+
+split
+
+partition "CI: Backend\n(ci-backend.yml)" #dae8fc {
+  [Restore NuGet packages]
+  [Build\n(.NET 10)]
+  [Analyze\n(SonarCloud)]
+  [Test\n(Unit, Integration,\nArchitecture, E2E)]
+  [Lint + Security\n(CodeQL, Dependency Review)]
+  [Build Docker image\n(sokohub/api:sha)]
+  [Push to registry\n(Azure CR / ECR)]
+}
+
+partition "CI: Frontend\n(ci-frontend.yml)" #dae8fc {
+  [Install npm deps]
+  [Lint + Typecheck\n(Eslint, Prettier)]
+  [Build\n(Nuxt 3 SSR)]
+  [Test\n(Vitest, Playwright)]
+  [Static analysis\n(SonarCloud)]
+  [Build Docker image\n(sokohub/frontend:sha)]
+  [Push to registry]
+}
+
+partition "CI: Infrastructure\n(ci-infrastructure.yml)" #dae8fc {
+  [Terraform fmt]
+  [Terraform init]
+  [Terraform validate]
+  [Terraform plan\n(plan file)]
+}
+
+split again
+
+partition "CD: Staging\n(cd-staging.yml)" #fff2cc {
+  [Download images\n(staging tag)]
+  [Terraform apply\n(dev/stage infra)]
+  [Helm deploy\n(staging)]
+  [Database migrations\n(SokoHubDb)]
+  [Smoke tests\n(Synthetic checks)]
+  (Manual approval)
+}
+
+partition "CD: Production\n(cd-production.yml)" #f8cecc {
+  [Download images\n(prod tag)]
+  [Terraform apply\n(prod infra)]
+  [Helm deploy\n(canary → 20%)]
+  [Canary analysis\n(Prometheus, Grafana)]
+  [Database migrations\n(blue/green)]
+  [Gradual rollout\n(→ 100%)]
+  [Smoke tests\n& Synthetic checks]
+  [Post-deploy\nvalidation]
+}
+
+split again
+
+partition "Security\n(security-scan.yml)" #f5f5f5 {
+  [CodeQL analysis]
+  [Dependency review]
+  [Container scan\n(Trivy)]
+  [IaC scan\n(Checkov)]
+}
+
+[GitHub Repo\n(source code + IaC)] --> [Restore NuGet packages]
+[GitHub Repo\n(source code + IaC)] --> [Install npm deps]
+[GitHub Repo\n(source code + IaC)] --> [Terraform fmt]
+[GitHub Repo\n(source code + IaC)] --> [CodeQL analysis]
+
+note right of [Build Docker image\n(sokohub/api:sha)]
+  Multi-stage Dockerfile
+  - Build stage: SDK restore + compile
+  - Final stage: ASP.NET runtime
+  Tag: git SHA + semver
+end note
+
+note right of [Download images\n(prod tag)]
+  <b>Blue/Green deployments</b>
+  - New ReplicaSet created
+  - Traffic shifted via Istio/ALB
+  - Rollback on failure (3 min window)
+  - Feature flags gate new features
+end note
+
+note right of [Helm deploy\n(canary → 20%)]
+  Helm chart: sokohub/
+  Values per environment:
+  - dev, staging, prod
+  - Secrets from Azure Key Vault / AWS Secrets Manager
+  - Image tag from CI
+end note
+
+note bottom of partition "CI: Infrastructure\n(ci-infrastructure.yml)"
+  <b>Terraform workspaces:</b> dev, staging, prod
+  <b>Modules:</b> networking, compute, databases, messaging, cache, storage, monitoring
+end note
+
+@enduml

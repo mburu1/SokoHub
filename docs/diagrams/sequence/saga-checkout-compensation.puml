@@ -1,0 +1,49 @@
+@startuml
+title Checkout Saga with Compensation
+actor Customer
+participant "Nuxt Frontend" as Frontend
+participant "SokoHub API" as Api
+participant "Checkout Saga" as Saga
+participant "Inventory" as Inventory
+participant "Orders" as Orders
+participant "Payments" as Payments
+database "MSSQL" as Store
+participant "RabbitMQ" as Broker
+participant "Workers" as Workers
+
+Customer -> Frontend: place order
+Frontend -> Api: POST /api/checkout
+Api -> Saga: start saga
+Saga -> Inventory: reserve items
+Inventory -> Store: create InventoryReservation
+Inventory --> Saga: InventoryReserved
+Saga -> Orders: create vendor orders
+Orders -> Store: persist order split
+Orders --> Saga: orders created
+Saga -> Payments: initiate payment
+Payments --> Saga: payment intent
+Saga -> Api: checkout result
+Api --> Frontend: checkout response
+
+== Success path ==
+Payments -> Broker: PaymentSucceeded
+Broker -> Workers: consume payment event
+Workers -> Inventory: consume reservations
+Inventory -> Store: decrease on-hand
+Workers -> Orders: confirm order
+Orders -> Broker: OrderConfirmed
+Broker -> Notifications: notify customer
+
+== Failure / compensation ==
+Payments -> Broker: PaymentFailed
+Broker -> Workers: consume failure event
+Workers -> Saga: compensate
+Saga -> Inventory: release reservations
+Inventory -> Store: mark reservations released
+Inventory -> Store: increase available stock
+Saga -> Orders: cancel vendor orders
+Orders -> Store: mark order cancelled
+Orders -> Broker: OrderCancelled
+Broker -> Notifications: notify customer
+Saga --> Api: saga complete
+@enduml

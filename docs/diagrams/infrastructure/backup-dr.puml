@@ -1,0 +1,121 @@
+@startuml
+title Backup & Disaster Recovery Strategy
+
+!theme plain
+skinparam rectangle {
+  BackgroundColor #dae8fc
+  BorderColor #666666
+}
+skinparam rectangle {
+  BackgroundColor<<backup>> #fff2cc
+  BackgroundColor<<dr>> #d5e8d4
+}
+
+node "Primary Region (Region A)" {
+  database "MSSQL\n(PaaS: Azure SQL / RDS)\nDaily full + log backups\nPITR: 35 days\nRPO: 5 min\nRTO: 10 min" as MSSQL_PRIMARY
+  database "PostgreSQL\n(Daily full + WAL\ncontinuous archiving)\nRPO: 5 min\nRTO: 15 min" as PG_PRIMARY
+  database "MySQL\n(Daily snapshot +\nbinlog PITR)\nRPO: 5 min\nRTO: 15 min" as MYSQL_PRIMARY
+  database "MongoDB\n(Continuous cloud\nbackup + oplog PITR)\nRPO: 1 min\nRTO: 15 min" as MONGO_PRIMARY
+  database "Oracle\n(RMAN full +\narchivelog\nData Guard standby)\nRPO: 1 min\nRTO: 30 min" as ORACLE_PRIMARY
+  database "Redis\n(RDB every 15 min +\nAOF persistence)\nRPO: 15 min\nRTO: 5 min" as REDIS_PRIMARY
+  database "Kafka\n(RF=3, replication\nwithin region)\nRPO: 0\nRTO: 5 min" as KAFKA_PRIMARY
+  storage "OpenSearch\n(S3 snapshot\nevery 6 hrs)" as OS_PRIMARY
+  storage "Blob Storage\n(Geo-redundant)" as BLOB_PRIMARY
+}
+
+node "Backup Vault" <<backup>> #fff2cc {
+  [Azure Backup / S3 Glacier\n(MSSQL full backups)]
+  [WAL-G / Barman\n(PostgreSQL WAL)]
+  [MySQL Enterprise Backup\n(binlog archive)]
+  [MongoDB Cloud\n(continuous backup)]
+  [Oracle RMAN\n(tape + disk)]
+  [Redis\n(RDB snapshot store)]
+  [OpenSearch\n(snapshot repo)]
+}
+
+node "DR Region (Region B)" <<dr>> #d5e8d4 {
+  database "MSSQL\n(Standby / Read Scale\nGeo-replica)" as MSSQL_DR
+  database "PostgreSQL\n(Logical replica)" as PG_DR
+  database "MySQL\n(Read replica)\nRPO: 1h" as MYSQL_DR
+  database "MongoDB\n(Cross-region\nbackup restore)" as MONGO_DR
+  database "Oracle\n(Data Guard\nPhysical standby\nActive Data Guard)" as ORACLE_DR
+  database "Redis\n(Cold standby)" as REDIS_DR
+  database "Kafka\n(MirrorMaker 2\nto DR region)\nRPO: 1 min" as KAFKA_DR
+  storage "OpenRestore\n(from S3 snapshots)" as OS_DR
+}
+
+node "Recovery Processes" {
+  [Backup Verification\n(Daily restore test)]
+  [DR Failover\n(manual trigger)]
+  [DR Drill\n(Quarterly)]
+  [Point-in-Time Restore\n(Request)](PITR)
+}
+
+' Primary -> Backup
+MSSQL_PRIMARY -[#orange,dashed]-> [Azure Backup / S3 Glacier\n(MSSQL full backups)]
+PG_PRIMARY -[#orange,dashed]-> [WAL-G / Barman\n(PostgreSQL WAL)]
+MYSQL_PRIMARY -[#orange,dashed]-> [MySQL Enterprise Backup\n(binlog archive)]
+MONGO_PRIMARY -[#orange,dashed]-> [MongoDB Cloud\n(continuous backup)]
+ORACLE_PRIMARY -[#orange,dashed]-> [Oracle RMAN\n(tape + disk)]
+REDIS_PRIMARY -[#orange,dashed]-> [Redis\n(RDB snapshot store)]
+OS_PRIMARY -[#orange,dashed]-> [OpenSearch\n(snapshot repo)]
+BLOB_PRIMARY -[#orange,dashed]-> [Azure Backup / S3 Glacier\n(MSSQL full backups)]
+
+' Cross-region replication (active)
+KAFKA_PRIMARY -[#green,dashed]-> KAFKA_DR : "MirrorMaker 2"
+ORACLE_PRIMARY -[#green,dashed]-> ORACLE_DR : "Data Guard sync"
+MSSQL_PRIMARY -[#green,dashed]-> MSSQL_DR : "Geo-replica (async)"
+
+' DR recovery paths
+MSSQL_DR -[#blue,dotted,thickness=2]-> [Point-in-Time Restore\n(Request)]
+PG_DR -[#blue,dotted,thickness=2]-> [Point-in-Time Restore\n(Request)]
+MONGO_DR -[#blue,dotted,thickness=2]-> [Point-in-Time Restore\n(Request)]
+ORACLE_DR -[#blue,dotted,thickness=2]-> [Point-in-Time Restore\n(Request)]
+KAFKA_DR -[#blue,dotted,thickness=2]-> [DR Failover\n(manual trigger)]
+REDIS_DR -[#blue,dotted,thickness=2]-> [DR Failover\n(manual trigger)]
+OS_DR -[#blue,dotted,thickness=2]-> [Point-in-Time Restore\n(Request)]
+
+note right of MSSQL_PRIMARY
+  <b>MSSQL Backup Schedule:</b>
+  - Full: daily, 2 AM
+  - Diff: hourly
+  - Log: every 5 min
+  - Retention: 35 days
+  - Stored: Azure Blob (RAO)
+end note
+
+note right of PG_PRIMARY
+  <b>PostgreSQL Backup Schedule:</b>
+  - Base: daily at 3 AM
+  - WAL: continuous archiving
+  - PITR: 35 days
+  - Stored: Blob (RAO)
+end note
+
+note right of ORACLE_PRIMARY
+  <b>Oracle Backup Schedule:</b>
+  - RMAN full: daily
+  - Archivelog: continuous
+  - Data Guard: sync to Region B
+  - RPO: 1 min, RTO: 30 min
+  - Critical financial data
+end note
+
+note right of KAFKA_PRIMARY
+  <b>Kafka Cross-Region:</b>
+  - MirrorMaker 2 active
+  - Replication factor 3
+  - Within-region + cross-region
+  - Topic retention: 7 days
+end note
+
+note bottom of node "DR Region (Region B)"
+  <b>DR Objectives:</b>
+  - Critical data (MSSQL, Oracle, Kafka): RTO 15 min, RPO 5 min
+  - Analytics data (PostgreSQL, MongoDB): RTO 4 hrs, RPO 1 hr
+  - Non-critical (Redis, OpenSearch): RTO 8 hrs, RPO 24 hrs
+  - Failover: Manual approval → Terraform workspace switch → DNS cutover
+  - DR drill: Quarterly (scheduled downtime window)
+end note
+
+@enduml

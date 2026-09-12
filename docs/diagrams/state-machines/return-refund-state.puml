@@ -1,0 +1,59 @@
+@startuml
+title Return and Refund State Machine
+[*] -> Requested
+Requested -> Approved : vendor / admin approve
+Requested -> Rejected : rejection
+Approved -> Shipped : customer ships items
+Shipped -> Received : vendor receives return
+Received -> Inspecting : inspection started
+Inspecting -> Refunding : refund approved
+Inspecting -> Rejected : inspection failed
+Refunding -> Refunded : payment provider confirms
+Refunding -> Failed : provider error
+Refunded -> [*]
+Failed -> Refunding : retry
+Rejected -> [*]
+
+state Requested {
+  [*] -> Creating
+  Creating -> PendingReview : return request submitted
+  PendingReview -> Approved : review approved
+  PendingReview -> Rejected : review rejected
+}
+
+state Approved {
+  [*] -> AwaitingShipping
+  AwaitingShipping -> Shipped : return label used
+}
+
+state Shipped {
+  [*] -> InTransit
+  InTransit -> Received : carrier confirms delivered
+}
+
+state Received {
+  [*] -> Inspecting
+}
+
+state Inspecting {
+  [*] -> Evaluating
+  Evaluating -> Refunding : items accepted
+  Evaluating -> Rejected : items damaged / wrong
+}
+
+state Refunding {
+  [*] -> Processing
+  Processing -> Refunded : provider confirms
+  Processing -> Failed : provider error
+}
+
+state Refunded {
+  [*] -> Completed
+  Completed -> [*]
+}
+
+state Rejected {
+  [*] -> Notified
+  Notified -> [*]
+}
+@enduml
