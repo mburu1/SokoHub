@@ -1,0 +1,62 @@
+name: CD - Staging
+
+on:
+  push:
+    branches: [develop]
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+      - 'infra/**'
+      - '.github/workflows/cd-staging.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: staging-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  package:
+    name: Package staging release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore backend
+        run: dotnet restore backend/SokoHub.slnx
+
+      - name: Publish API
+        run: dotnet publish backend/src/SokoHub.Api/SokoHub.Api.csproj --configuration Release --no-restore --output ./release/api --nologo
+
+      - name: Create release manifest
+        shell: bash
+        run: |
+          cat > ./release/release-manifest.txt <<EOF
+          application=SokoHub
+          environment=staging
+          commit=${GITHUB_SHA}
+          ref=${GITHUB_REF_NAME}
+          generated_at=${EPOCHSECONDS}
+          EOF
+
+      - name: Upload staging package
+        uses: actions/upload-artifact@v6
+        with:
+          name: sokohub-staging-${{ github.sha }}
+          path: release
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Deployment status
+        run: |
+          echo "Staging package created successfully."
+          echo "No deployment target is configured in the repository yet; this workflow intentionally stops after producing a deployable artifact."
