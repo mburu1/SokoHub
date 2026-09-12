@@ -1,0 +1,64 @@
+name: CD - Production
+
+on:
+  workflow_dispatch:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production
+  cancel-in-progress: false
+
+jobs:
+  package:
+    name: Package production release
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore backend
+        run: dotnet restore backend/SokoHub.slnx
+
+      - name: Build backend
+        run: dotnet build backend/SokoHub.slnx --configuration Release --no-restore --nologo
+
+      - name: Run tests
+        run: dotnet test backend/SokoHub.slnx --configuration Release --no-build --no-restore --nologo
+
+      - name: Publish API
+        run: dotnet publish backend/src/SokoHub.Api/SokoHub.Api.csproj --configuration Release --no-restore --output ./release/api --nologo
+
+      - name: Create release manifest
+        shell: bash
+        run: |
+          cat > ./release/release-manifest.txt <<EOF
+          application=SokoHub
+          environment=production
+          commit=${GITHUB_SHA}
+          ref=${GITHUB_REF_NAME}
+          generated_at=${EPOCHSECONDS}
+          EOF
+
+      - name: Upload production package
+        uses: actions/upload-artifact@v6
+        with:
+          name: sokohub-production-${{ github.sha }}
+          path: release
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Deployment status
+        run: |
+          echo "Production release package validated and created successfully."
+          echo "No production deployment target is configured in the repository yet; this workflow intentionally does not perform an unconfigured deployment."
